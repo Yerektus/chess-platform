@@ -9,6 +9,7 @@
   --color-square-light: #F0D9B5;
   --color-square-dark: #B58863;
   --color-highlight: rgba(20,85,30,0.5);
+  --color-modal-backdrop: rgba(0,0,0,0.5);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -42,4 +43,5 @@
   --color-square-light: #F0D9B5;
   --color-square-dark: #B58863;
   --color-highlight: rgba(20,85,30,0.5);
+  --color-modal-backdrop: rgba(0,0,0,0.7);
 }
