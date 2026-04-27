@@ -1,0 +1,18 @@
+{
+  "name": "@chess-platform/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint-config/index.js",
+    "./tailwind": "./tailwind-config/index.js",
+    "./typescript/base": "./typescript/tsconfig.base.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
