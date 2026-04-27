@@ -5,6 +5,7 @@ import {
   getGameStatus,
   getLegalMoves,
   parseFEN,
+  toFEN,
   type BoardState,
   type Color,
   type Piece,
@@ -12,9 +13,14 @@ import {
   type Square
 } from "@chess-platform/chess-engine";
 import { Button, Card, ChessBoard, Modal } from "@chess-platform/ui";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useStockfish } from "@/hooks/use-stockfish";
 
 const initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const stockfishDepth = 12;
+const aiColor: Color = "black";
+
+type GameMode = "local" | "ai";
 
 type LastMove = {
   from: Square;
@@ -50,54 +56,62 @@ const pieceName: Record<PieceType, string> = {
   pawn: "Pawn"
 };
 
-export function LocalGame() {
+export function LocalGame({ mode = "local" }: { mode?: GameMode }) {
+  const isAiGame = mode === "ai";
+  const { error: stockfishError, getMove, isReady: isStockfishReady } = useStockfish(isAiGame);
   const [state, setState] = useState<BoardState>(() => parseFEN(initialFen));
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [capturedPieces, setCapturedPieces] = useState<CapturedPiece[]>([]);
   const [lastMove, setLastMove] = useState<LastMove | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const gameVersionRef = useRef(0);
 
   const legalMoves = useMemo(
     () => (selectedSquare ? getLegalMoves(state, selectedSquare) : []),
     [selectedSquare, state]
   );
   const moveRows = useMemo(() => toMoveRows(moveHistory), [moveHistory]);
+  const canUseBoard = !result && !isAiThinking && (!isAiGame || state.turn !== aiColor);
 
   const resetGame = () => {
+    gameVersionRef.current += 1;
     setState(parseFEN(initialFen));
     setSelectedSquare(null);
     setMoveHistory([]);
     setCapturedPieces([]);
     setLastMove(null);
     setResult(null);
+    setIsAiThinking(false);
   };
 
-  const handleSquareClick = (square: Square) => {
-    if (result) {
-      return;
-    }
-
-    if (selectedSquare && legalMoves.includes(square)) {
-      const movingPiece = state.squares[selectedSquare];
+  const commitMove = useCallback(
+    (
+      currentState: BoardState,
+      from: Square,
+      to: Square,
+      promotion: "queen" | "rook" | "bishop" | "knight" = "queen"
+    ): BoardState | null => {
+      const movingPiece = currentState.squares[from];
 
       if (!movingPiece) {
         setSelectedSquare(null);
-        return;
+        return null;
       }
 
-      const capturedPiece = findCapturedPiece(state, selectedSquare, square);
-      const nextState = applyMove(state, selectedSquare, square);
+      const capturedPiece = findCapturedPiece(currentState, from, to);
+      const nextState = applyMove(currentState, from, to, promotion);
       const nextStatus = getGameStatus(nextState);
-      const notation = formatMove(movingPiece, selectedSquare, square, Boolean(capturedPiece));
+      const notation = formatMove(movingPiece, from, to, Boolean(capturedPiece), promotion);
 
       setState(nextState);
       setMoveHistory((history) => [
         ...history,
         {
-          from: selectedSquare,
-          to: square,
-          moveNumber: state.fullmoveNumber,
+          from,
+          to,
+          moveNumber: currentState.fullmoveNumber,
           color: movingPiece.color,
           notation
         }
@@ -113,13 +127,69 @@ export function LocalGame() {
         ]);
       }
 
-      setLastMove({ from: selectedSquare, to: square });
+      setLastMove({ from, to });
       setSelectedSquare(null);
 
       if (nextStatus === "checkmate") {
         setResult(`${capitalize(movingPiece.color)} wins by checkmate`);
       } else if (nextStatus === "stalemate") {
         setResult("Draw by stalemate");
+      } else if (nextStatus === "draw") {
+        setResult("Draw");
+      }
+
+      return nextState;
+    },
+    []
+  );
+
+  const requestAiMove = useCallback(
+    async (currentState: BoardState, gameVersion: number) => {
+      setIsAiThinking(true);
+
+      try {
+        const bestMove = await getMove(toFEN(currentState), stockfishDepth);
+
+        if (gameVersionRef.current !== gameVersion) {
+          return;
+        }
+
+        const parsedMove = parseUciMove(bestMove);
+
+        if (!parsedMove) {
+          throw new Error("Stockfish returned an invalid move");
+        }
+
+        const legalAiMoves = getLegalMoves(currentState, parsedMove.from);
+
+        if (!legalAiMoves.includes(parsedMove.to)) {
+          throw new Error("Stockfish returned an illegal move");
+        }
+
+        commitMove(currentState, parsedMove.from, parsedMove.to, parsedMove.promotion);
+      } catch (error) {
+        if (gameVersionRef.current === gameVersion) {
+          setResult(error instanceof Error ? error.message : "Stockfish move failed");
+        }
+      } finally {
+        if (gameVersionRef.current === gameVersion) {
+          setIsAiThinking(false);
+        }
+      }
+    },
+    [commitMove, getMove]
+  );
+
+  const handleSquareClick = (square: Square) => {
+    if (!canUseBoard) {
+      return;
+    }
+
+    if (selectedSquare && legalMoves.includes(square)) {
+      const nextState = commitMove(state, selectedSquare, square);
+
+      if (nextState && isAiGame && nextState.turn === aiColor && getGameStatus(nextState) === "ongoing") {
+        void requestAiMove(nextState, gameVersionRef.current);
       }
 
       return;
@@ -149,20 +219,31 @@ export function LocalGame() {
         <aside className="flex w-full flex-col gap-4 lg:w-[280px]">
           <Card className="flex flex-col gap-4">
             <div>
-              <h2 className="text-[18px] font-medium leading-[1.2]">Local game</h2>
+              <h2 className="text-[18px] font-medium leading-[1.2]">
+                {isAiGame ? "AI game" : "Local game"}
+              </h2>
               <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
                 {capitalize(state.turn)} to move
               </p>
+              {isAiGame && !isStockfishReady && !stockfishError ? (
+                <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">Preparing engine</p>
+              ) : null}
+              {isAiThinking ? (
+                <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">Thinking...</p>
+              ) : null}
+              {stockfishError ? (
+                <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{stockfishError}</p>
+              ) : null}
             </div>
 
             <CapturedPieces pieces={capturedPieces} />
             <MoveHistory rows={moveRows} currentMoveNumber={state.fullmoveNumber} />
 
             <div className="grid grid-cols-2 gap-3">
-              <Button onClick={() => setResult(`${capitalize(state.turn)} resigned`)} variant="ghost">
+              <Button disabled={isAiThinking} onClick={() => setResult(`${capitalize(state.turn)} resigned`)} variant="ghost">
                 Resign
               </Button>
-              <Button onClick={() => setResult("Draw offered")} variant="ghost">
+              <Button disabled={isAiThinking} onClick={() => setResult("Draw offered")} variant="ghost">
                 Offer Draw
               </Button>
             </div>
@@ -299,13 +380,64 @@ function findCapturedPiece(state: BoardState, from: Square, to: Square): Piece |
   return null;
 }
 
-function formatMove(piece: Piece, from: Square, to: Square, isCapture: boolean): string {
+function formatMove(
+  piece: Piece,
+  from: Square,
+  to: Square,
+  isCapture: boolean,
+  promotion?: "queen" | "rook" | "bishop" | "knight"
+): string {
   const prefix = piece.type === "pawn" && isCapture ? from[0] : pieceNotation[piece.type];
   const capture = isCapture ? "x" : "-";
+  const promotionSuffix = piece.type === "pawn" && promotion && (to.endsWith("8") || to.endsWith("1"))
+    ? `=${pieceNotation[promotion]}`
+    : "";
 
-  return `${prefix}${from}${capture}${to}`;
+  return `${prefix}${from}${capture}${to}${promotionSuffix}`;
 }
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function parseUciMove(
+  move: string
+): { from: Square; to: Square; promotion?: "queen" | "rook" | "bishop" | "knight" } | null {
+  const from = move.slice(0, 2);
+  const to = move.slice(2, 4);
+  const promotion = move.slice(4, 5);
+
+  if (!isSquare(from) || !isSquare(to)) {
+    return null;
+  }
+
+  return {
+    from,
+    to,
+    promotion: parsePromotion(promotion)
+  };
+}
+
+function parsePromotion(value: string): "queen" | "rook" | "bishop" | "knight" | undefined {
+  if (value === "q") {
+    return "queen";
+  }
+
+  if (value === "r") {
+    return "rook";
+  }
+
+  if (value === "b") {
+    return "bishop";
+  }
+
+  if (value === "n") {
+    return "knight";
+  }
+
+  return undefined;
+}
+
+function isSquare(value: string): value is Square {
+  return /^[a-h][1-8]$/.test(value);
 }

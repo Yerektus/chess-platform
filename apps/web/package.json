@@ -14,7 +14,8 @@
     "@chess-platform/ui": "workspace:*",
     "next": "^14.2.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "stockfish": "^18.0.7"
   },
   "devDependencies": {
     "@chess-platform/config": "workspace:*",

@@ -8,9 +8,9 @@ type GamePageProps = {
 };
 
 export default function GamePage({ params }: GamePageProps) {
-  if (params.mode !== "local") {
+  if (params.mode !== "local" && params.mode !== "ai") {
     notFound();
   }
 
-  return <LocalGame />;
+  return <LocalGame mode={params.mode} />;
 }
