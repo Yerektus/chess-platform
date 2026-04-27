@@ -1,4 +1,16 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards
+} from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CreateGameDto } from "./dto/create-game.dto";
 import { GameHistoryResponseDto } from "./dto/game-history-response.dto";
@@ -52,6 +64,15 @@ export class GamesController {
     }
 
     return toGameResponse(game);
+  }
+
+  @Post(":id/analyze")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(JwtAuthGuard)
+  async analyze(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<{ status: "accepted" }> {
+    await this.gamesService.startAnalysis(id, getAuthenticatedUserId(request));
+
+    return { status: "accepted" };
   }
 }
 

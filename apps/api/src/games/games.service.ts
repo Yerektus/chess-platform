@@ -1,12 +1,18 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { CreateGameDto } from "./dto/create-game.dto";
 import { Game, type GameDocument } from "./schemas/game.schema";
+import { StockfishAnalysisService } from "./stockfish-analysis.service";
 
 @Injectable()
 export class GamesService {
-  constructor(@InjectModel(Game.name) private readonly gameModel: Model<GameDocument>) {}
+  private readonly activeAnalysisJobs = new Set<string>();
+
+  constructor(
+    @InjectModel(Game.name) private readonly gameModel: Model<GameDocument>,
+    private readonly stockfishAnalysisService: StockfishAnalysisService
+  ) {}
 
   async create(dto: CreateGameDto & { whiteId: string }): Promise<GameDocument> {
     return this.gameModel.create({
@@ -58,4 +64,37 @@ export class GamesService {
       limit: normalizedLimit
     };
   }
+
+  async startAnalysis(id: string, userId: string): Promise<void> {
+    const game = await this.findById(id);
+
+    if (!game) {
+      throw new NotFoundException("Game not found");
+    }
+
+    if (!userOwnsGame(game, userId)) {
+      throw new ForbiddenException("User does not own this game");
+    }
+
+    if (this.activeAnalysisJobs.has(game._id.toString())) {
+      return;
+    }
+
+    this.activeAnalysisJobs.add(game._id.toString());
+    void this.runAnalysis(game._id.toString(), game.pgn).catch(() => undefined);
+  }
+
+  private async runAnalysis(id: string, pgn: string): Promise<void> {
+    try {
+      const analysis = await this.stockfishAnalysisService.analyzePgn(pgn);
+
+      await this.gameModel.findByIdAndUpdate(id, { analysis }, { runValidators: true }).exec();
+    } finally {
+      this.activeAnalysisJobs.delete(id);
+    }
+  }
+}
+
+function userOwnsGame(game: GameDocument, userId: string): boolean {
+  return game.whiteId.toString() === userId || game.blackId?.toString() === userId;
 }

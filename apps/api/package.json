@@ -28,7 +28,8 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "stockfish": "^18.0.7"
   },
   "devDependencies": {
     "@chess-platform/config": "workspace:*",
