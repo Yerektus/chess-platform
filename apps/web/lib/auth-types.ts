@@ -29,3 +29,11 @@ export type GameHistoryResponse = {
   limit: number;
   total: number;
 };
+
+export type LeaderboardEntry = {
+  rank: number;
+  username: string;
+  elo: number;
+  city: string | null;
+  gamesPlayed: number;
+};
