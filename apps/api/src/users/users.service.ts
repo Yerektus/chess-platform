@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
-import { User, type UserDocument } from "./schemas/user.schema";
+import { User, type UserDocument, type UserPlan } from "./schemas/user.schema";
 
 @Injectable()
 export class UsersService {
@@ -50,5 +50,13 @@ export class UsersService {
     const update = refreshTokenHash ? { refreshTokenHash } : { $unset: { refreshTokenHash: "" } };
 
     return this.userModel.findByIdAndUpdate(id, update, { new: true }).exec();
+  }
+
+  async updatePlanById(id: string, plan: UserPlan): Promise<UserDocument | null> {
+    if (!Types.ObjectId.isValid(id)) {
+      return null;
+    }
+
+    return this.userModel.findByIdAndUpdate(id, { plan }, { new: true, runValidators: true }).exec();
   }
 }
