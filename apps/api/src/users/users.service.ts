@@ -41,4 +41,14 @@ export class UsersService {
 
     return this.userModel.findByIdAndUpdate(id, update, { new: true, runValidators: true }).exec();
   }
+
+  async updateRefreshTokenHash(id: string, refreshTokenHash: string | null): Promise<UserDocument | null> {
+    if (!Types.ObjectId.isValid(id)) {
+      return null;
+    }
+
+    const update = refreshTokenHash ? { refreshTokenHash } : { $unset: { refreshTokenHash: "" } };
+
+    return this.userModel.findByIdAndUpdate(id, update, { new: true }).exec();
+  }
 }

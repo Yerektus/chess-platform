@@ -1,5 +1,5 @@
 import { Body, Controller, Get, NotFoundException, Param, Patch, Req, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UserResponseDto } from "./dto/user-response.dto";
 import { type UserDocument } from "./schemas/user.schema";
@@ -10,7 +10,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("me")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(JwtAuthGuard)
   async getMe(@Req() request: AuthenticatedRequest): Promise<UserResponseDto> {
     const user = await this.usersService.findById(getAuthenticatedUserId(request));
 
@@ -33,7 +33,7 @@ export class UsersController {
   }
 
   @Patch("me")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(JwtAuthGuard)
   async updateMe(@Req() request: AuthenticatedRequest, @Body() dto: UpdateUserDto): Promise<UserResponseDto> {
     const user = await this.usersService.updateById(getAuthenticatedUserId(request), dto);
 

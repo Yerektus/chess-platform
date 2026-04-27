@@ -18,6 +18,9 @@ export class User {
   @Prop({ required: true })
   passwordHash!: string;
 
+  @Prop()
+  refreshTokenHash?: string;
+
   @Prop({ default: 1200, min: 0 })
   elo!: number;
 
