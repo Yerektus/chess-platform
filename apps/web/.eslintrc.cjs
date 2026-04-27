@@ -1,7 +1,9 @@
 const sharedConfig = require("@chess-platform/config/eslint");
+const nextAppExtends = sharedConfig.extends.filter((entry) => entry !== "plugin:react-hooks/recommended");
 
 module.exports = {
   ...sharedConfig,
   root: true,
-  extends: [...sharedConfig.extends, "next/core-web-vitals"]
+  plugins: sharedConfig.plugins.filter((plugin) => plugin !== "react-hooks"),
+  extends: [...nextAppExtends, "next/core-web-vitals"]
 };
