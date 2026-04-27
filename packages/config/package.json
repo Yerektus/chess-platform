@@ -2,17 +2,30 @@
   "name": "@chess-platform/config",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "exports": {
     "./eslint": "./eslint-config/index.js",
     "./tailwind": "./tailwind-config/index.js",
-    "./typescript/base": "./typescript/tsconfig.base.json"
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./typescript/base": "./tsconfig.base.json"
   },
   "scripts": {
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests"
   },
+  "peerDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
   }
 }
