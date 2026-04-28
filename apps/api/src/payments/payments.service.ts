@@ -69,7 +69,7 @@ export class PaymentsService {
       return { subscription: null, nextBillingDate: null };
     }
 
-    const subscription = subscriptions.data[0];
+    const subscription = subscriptions.data[0] as StripeSubscription;
     const nextBillingDate = subscription.current_period_end
       ? new Date(subscription.current_period_end * 1000).toISOString()
       : null;
@@ -196,7 +196,7 @@ function createStripeClient(secretKey: string) {
 type StripeClient = ReturnType<typeof createStripeClient>;
 type StripeEvent = ReturnType<StripeClient["webhooks"]["constructEvent"]>;
 type StripeCheckoutSession = Awaited<ReturnType<StripeClient["checkout"]["sessions"]["create"]>>;
-type StripeCustomer = Awaited<ReturnType<StripeClient["customers"]["create"]>>;
+type StripeCustomer = Stripe.Customer;
 type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["list"]>>["data"][number] & {
   current_period_end?: number | null;
 };

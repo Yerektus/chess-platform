@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/auth/auth-provider";
 import { type GameHistoryResponse } from "@/lib/auth-types";
 import { Button, Card, Modal } from "@chess-platform/ui";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 export function ProfileClient({ page }: { page: number }) {
   const { accessToken, user, isLoading, logout } = useAuth();
@@ -436,11 +436,12 @@ function SubscriptionManager({
   );
 }
 
-function ProfileStat({ label, value }: { label: string; value: string }) {
+function ProfileStat({ label, value, action }: { label: string; value: string; action?: ReactNode }) {
   return (
     <Card>
       <p className="text-[13px] text-[var(--color-text-secondary)]">{label}</p>
       <p className="mt-2 text-[24px] font-medium leading-[1.2]">{value}</p>
+      {action}
     </Card>
   );
 }
