@@ -181,11 +181,11 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const [flipLocalBoard, setFlipLocalBoard] = useState(true);
   const isBotGame = activeMode === "bot" && gameStarted;
   const aiColor = aiColorByPlayerColor[playerColor];
-  const { error: stockfishError, getMove, isReady: isStockfishReady } = useStockfish(isBotGame);
+  const { error: _stockfishError, getMove, isReady: _isStockfishReady } = useStockfish(isBotGame);
   const [state, setState] = useState<BoardState>(() => parseFEN(initialFen));
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
-  const [capturedPieces, setCapturedPieces] = useState<CapturedPiece[]>([]);
+  const [_capturedPieces, setCapturedPieces] = useState<CapturedPiece[]>([]);
   const [lastMove, setLastMove] = useState<LastMove | null>(null);
   const [hoverMove, setHoverMove] = useState<LastMove | null>(null);
   const [viewedPly, setViewedPly] = useState<number | null>(null);
@@ -1331,7 +1331,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (valu
   );
 }
 
-function CustomizationGrid<T extends string>({
+function _CustomizationGrid<T extends string>({
   isPremium,
   items,
   label,
@@ -1369,7 +1369,7 @@ function CustomizationGrid<T extends string>({
   );
 }
 
-function ToggleRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: (value: boolean) => void }) {
+function _ToggleRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: (value: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-[var(--color-text-secondary)]">{label}</span>
@@ -1447,7 +1447,7 @@ function PlanCard({
   );
 }
 
-function GameModeSelector({
+function _GameModeSelector({
   activeMode,
   gameStarted,
   onModeChange
@@ -1490,7 +1490,7 @@ function ModeButton({ active, icon, label, onClick }: { active: boolean; icon: s
   );
 }
 
-function GameSummary({
+function _GameSummary({
   activeMode,
   capturedPieces,
   isAiThinking,

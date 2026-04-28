@@ -281,6 +281,15 @@ export function ProfileClient({ page }: { page: number }) {
   );
 }
 
+type SubscriptionResponse = {
+  subscription: {
+    id: string;
+    status: string;
+    priceId: string | null;
+  } | null;
+  nextBillingDate: string | null;
+};
+
 function SubscriptionManager({
   accessToken,
   userPlan
@@ -288,7 +297,7 @@ function SubscriptionManager({
   accessToken: string | null;
   userPlan?: string;
 }) {
-  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
