@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { type GameHistoryResponse } from "@/lib/auth-types";
+import { type AuthUser, type GameHistoryResponse } from "@/lib/auth-types";
 import { Button, Card } from "@chess-platform/ui";
 import { useEffect, useState } from "react";
 
@@ -9,6 +9,43 @@ export function ProfileClient({ page }: { page: number }) {
   const { accessToken, user, isLoading, logout } = useAuth();
   const [history, setHistory] = useState<GameHistoryResponse | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [city, setCity] = useState(user?.city ?? "");
+  const [isSavingCity, setIsSavingCity] = useState(false);
+  const [citySaveError, setCitySaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCity(user?.city ?? "");
+  }, [user?.city]);
+
+  const handleSaveCity = async () => {
+    if (!accessToken) {
+      return;
+    }
+
+    setIsSavingCity(true);
+    setCitySaveError(null);
+
+    try {
+      const response = await fetch("/api/users/city", {
+        body: JSON.stringify({ city }),
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        method: "PATCH"
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error((payload as { message?: string })?.message ?? "Unable to save city");
+      }
+    } catch (caughtError) {
+      setCitySaveError(caughtError instanceof Error ? caughtError.message : "Unable to save city");
+    } finally {
+      setIsSavingCity(false);
+    }
+  };
 
   useEffect(() => {
     if (!accessToken) {
@@ -72,10 +109,26 @@ export function ProfileClient({ page }: { page: number }) {
           </Button>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-4">
           <ProfileStat label="Username" value={user?.username ?? "Unavailable"} />
           <ProfileStat label="ELO" value={String(user?.elo ?? "Unavailable")} />
           <ProfileStat label="Plan" value={user?.plan ?? "Unavailable"} />
+          <Card>
+            <p className="text-[13px] text-[var(--color-text-secondary)]">City</p>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                className="min-h-[32px] w-full rounded-[6px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[15px] text-[var(--color-text-primary)]"
+                onChange={(e) => setCity(e.target.value)}
+                value={city}
+              />
+              <Button disabled={isSavingCity} onClick={handleSaveCity} variant="ghost">
+                {isSavingCity ? "..." : "Save"}
+              </Button>
+            </div>
+            {citySaveError ? (
+              <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{citySaveError}</p>
+            ) : null}
+          </Card>
         </section>
 
         <Card>
