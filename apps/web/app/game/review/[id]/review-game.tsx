@@ -40,6 +40,7 @@ export function ReviewGame({ id }: ReviewGameProps) {
   const [error, setError] = useState<string | null>(null);
   const [currentPly, setCurrentPly] = useState(0);
   const [selectedMistakeMove, setSelectedMistakeMove] = useState<number | null>(null);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   const fetchGame = useCallback(async () => {
     if (!accessToken) {
@@ -114,7 +115,7 @@ export function ReviewGame({ id }: ReviewGameProps) {
   return (
     <main className="min-h-screen bg-[var(--color-bg)] px-6 py-8 text-[var(--color-text-primary)] md:px-12">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-6 lg:flex-row lg:items-start">
-        <section className="flex w-full max-w-[560px] flex-col gap-3">
+        <section className="flex w-full max-w-[min(calc(100vw_-_48px),560px)] flex-col gap-3 self-center lg:self-start">
           <PlayerLabel color="black" active={replay.state.turn === "black"} />
           <ChessBoard
             lastMove={replay.lastMove}
@@ -127,7 +128,19 @@ export function ReviewGame({ id }: ReviewGameProps) {
           <PlayerLabel color="white" active={replay.state.turn === "white"} />
         </section>
 
-        <aside className="flex w-full flex-col gap-4 lg:w-[320px]">
+        <div className="lg:hidden">
+          <Button className="min-h-11 w-full" onClick={() => setShowMobileSidebar((visible) => !visible)} variant="ghost">
+            {showMobileSidebar ? "Close" : "Show moves"}
+          </Button>
+        </div>
+
+        <aside
+          className={
+            showMobileSidebar
+              ? "flex w-full flex-col gap-4 lg:w-[320px]"
+              : "hidden w-full flex-col gap-4 lg:flex lg:w-[320px]"
+          }
+        >
           <Card className="flex flex-col gap-4">
             <div>
               <h2 className="text-[18px] font-medium leading-[1.2]">Game review</h2>

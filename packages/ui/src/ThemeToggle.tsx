@@ -24,6 +24,12 @@ export function ThemeToggle({ className, onThemeChange }: ThemeToggleProps) {
       document.documentElement.removeAttribute("data-theme");
     }
 
+    try {
+      window.localStorage.setItem("theme", nextTheme);
+    } catch {
+      // Ignore storage failures and keep the in-memory theme selection.
+    }
+
     setTheme(nextTheme);
     onThemeChange?.(nextTheme);
   };

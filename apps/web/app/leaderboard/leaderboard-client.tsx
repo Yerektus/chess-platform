@@ -79,8 +79,8 @@ export function LeaderboardClient({
                   <th className="w-[96px] px-3 py-3 text-left font-normal">Rank</th>
                   <th className="px-3 py-3 text-left font-normal">Player</th>
                   <th className="w-[120px] px-3 py-3 text-left font-normal">ELO</th>
-                  <th className="px-3 py-3 text-left font-normal">City</th>
-                  <th className="w-[120px] px-3 py-3 text-left font-normal">Games</th>
+                  <th className="hidden px-3 py-3 text-left font-normal sm:table-cell">City</th>
+                  <th className="hidden w-[120px] px-3 py-3 text-left font-normal sm:table-cell">Games</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,8 +98,8 @@ export function LeaderboardClient({
                         <td className="px-3 py-3 font-mono text-[13px]">{entry.rank}</td>
                         <td className="px-3 py-3">{entry.username}</td>
                         <td className="px-3 py-3 font-mono text-[13px]">{entry.elo}</td>
-                        <td className="px-3 py-3">{entry.city ?? "Unspecified"}</td>
-                        <td className="px-3 py-3 font-mono text-[13px]">{entry.gamesPlayed}</td>
+                        <td className="hidden px-3 py-3 sm:table-cell">{entry.city ?? "Unspecified"}</td>
+                        <td className="hidden px-3 py-3 font-mono text-[13px] sm:table-cell">{entry.gamesPlayed}</td>
                       </tr>
                     );
                   })

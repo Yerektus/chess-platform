@@ -1,5 +1,6 @@
 import { Button, Card } from "@chess-platform/ui";
 import Link from "next/link";
+import { LandingNavigation } from "./landing-navigation";
 
 type LeaderboardEntry = {
   rank: number;
@@ -19,24 +20,7 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">
-      <header className="border-b border-[var(--color-border)]">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-5 md:px-12">
-          <Link href="/" className="text-[15px] font-medium">
-            Chess Platform
-          </Link>
-          <nav className="flex items-center gap-6 text-[13px] text-[var(--color-text-secondary)]">
-            <Link href="#features" className="hover:text-[var(--color-text-primary)]">
-              Features
-            </Link>
-            <Link href="#pricing" className="hover:text-[var(--color-text-primary)]">
-              Pricing
-            </Link>
-            <Link href={webUrl("/login")} className="hover:text-[var(--color-text-primary)]">
-              Log in
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <LandingNavigation loginHref={webUrl("/login")} />
 
       <section className="mx-auto max-w-[1200px] px-6 pb-16 pt-20 md:px-12 md:pb-20 md:pt-24">
         <div className="max-w-[760px]">
@@ -46,7 +30,7 @@ export default async function LandingPage() {
           <p className="mt-6 max-w-[620px] text-[17px] leading-[1.6] text-[var(--color-text-secondary)]">
             Play serious games, improve with AI analysis, and compete with players in your city.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild>
               <Link href={webUrl("/game/local")}>Play now</Link>
             </Button>

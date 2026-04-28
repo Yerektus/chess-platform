@@ -11,8 +11,26 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
 }
+
+const themeInitScript = `
+(function () {
+  try {
+    var theme = window.localStorage.getItem("theme");
+    if (theme === "dark") {
+      document.documentElement.dataset.theme = "dark";
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  } catch (error) {
+    document.documentElement.removeAttribute("data-theme");
+  }
+})();
+`;
