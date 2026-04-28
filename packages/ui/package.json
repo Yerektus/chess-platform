@@ -13,7 +13,7 @@
     "./tokens.css": "./tokens.css"
   },
   "scripts": {
-    "prebuild": "pnpm --filter @chess-platform/types build",
+    "prebuild": "pnpm --filter @chess-platform/types build && pnpm --filter @chess-platform/chess-engine build",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests"
