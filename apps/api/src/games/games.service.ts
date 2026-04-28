@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
+import { type AnalyzeGameResponseDto } from "./dto/analyze-game-response.dto";
 import { CreateGameDto } from "./dto/create-game.dto";
 import { Game, type GameDocument } from "./schemas/game.schema";
 import { StockfishAnalysisService } from "./stockfish-analysis.service";
@@ -82,6 +83,10 @@ export class GamesService {
 
     this.activeAnalysisJobs.add(game._id.toString());
     void this.runAnalysis(game._id.toString(), game.pgn).catch(() => undefined);
+  }
+
+  async analyzePgn(pgn: string, depth?: number): Promise<AnalyzeGameResponseDto> {
+    return this.stockfishAnalysisService.analyzePgnDetailed(pgn, depth);
   }
 
   private async runAnalysis(id: string, pgn: string): Promise<void> {

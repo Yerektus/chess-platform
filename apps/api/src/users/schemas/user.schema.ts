@@ -4,6 +4,26 @@ import { HydratedDocument } from "mongoose";
 export type UserPlan = "free" | "pro";
 export type UserDocument = HydratedDocument<User>;
 
+@Schema({ _id: false })
+export class UserPreferences {
+  @Prop({ default: "green", enum: ["green", "blue", "wood", "marble"] })
+  boardTheme!: string;
+
+  @Prop({ default: "classic", enum: ["classic", "neon", "pixel", "premium"] })
+  pieceStyle!: string;
+
+  @Prop({ default: "#81b64c" })
+  highlightColor!: string;
+
+  @Prop({ default: true })
+  animations!: boolean;
+
+  @Prop({ default: true })
+  sounds!: boolean;
+}
+
+const UserPreferencesSchema = SchemaFactory.createForClass(UserPreferences);
+
 @Schema({
   collection: "users",
   versionKey: false
@@ -29,6 +49,9 @@ export class User {
 
   @Prop({ trim: true })
   city?: string;
+
+  @Prop({ default: () => ({}), type: UserPreferencesSchema })
+  preferences!: UserPreferences;
 
   @Prop({ default: Date.now })
   createdAt!: Date;

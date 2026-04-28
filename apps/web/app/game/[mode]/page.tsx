@@ -8,7 +8,7 @@ type GamePageProps = {
 };
 
 export default function GamePage({ params }: GamePageProps) {
-  if (params.mode !== "local" && params.mode !== "ai") {
+  if (params.mode !== "local" && params.mode !== "ai" && params.mode !== "bot" && params.mode !== "online") {
     notFound();
   }
 

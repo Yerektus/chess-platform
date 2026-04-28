@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserPreferencesDto } from "./dto/update-user-preferences.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { User, type UserDocument, type UserPlan } from "./schemas/user.schema";
 
@@ -58,5 +59,17 @@ export class UsersService {
     }
 
     return this.userModel.findByIdAndUpdate(id, { plan }, { new: true, runValidators: true }).exec();
+  }
+
+  async updatePreferencesById(id: string, preferences: UpdateUserPreferencesDto): Promise<UserDocument | null> {
+    if (!Types.ObjectId.isValid(id)) {
+      return null;
+    }
+
+    const update = Object.fromEntries(
+      Object.entries(preferences).map(([key, value]) => [`preferences.${key}`, value])
+    );
+
+    return this.userModel.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true }).exec();
   }
 }

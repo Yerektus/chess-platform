@@ -5,6 +5,7 @@ import {
   parseFEN,
   toFEN,
   type BoardState,
+  type Color,
   type Piece,
   type PieceType,
   type Square
@@ -13,6 +14,11 @@ import { Injectable } from "@nestjs/common";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
+import {
+  type AnalyzeGameMoveDto,
+  type AnalyzeGameResponseDto,
+  type MoveClassification
+} from "./dto/analyze-game-response.dto";
 import { type GameAnalysisEntry } from "./schemas/game.schema";
 
 type Move = {
@@ -44,51 +50,82 @@ const requireFromHere = createRequire(__filename);
 const enginePath = requireFromHere.resolve("stockfish/bin/stockfish-18-lite-single.js");
 const initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const analysisDepth = 18;
-const centipawnMistakeThreshold = 50;
 const engineTimeoutMs = 120_000;
 
 @Injectable()
 export class StockfishAnalysisService {
   async analyzePgn(pgn: string): Promise<GameAnalysisEntry[]> {
+    const detailed = await this.analyzePgnDetailed(pgn, analysisDepth);
+
+    return detailed.moves.map((move, index) => ({
+      move: index + 1,
+      mistake: move.classification === "mistake" || move.classification === "blunder",
+      suggestion: move.comment ?? ""
+    }));
+  }
+
+  async analyzePgnDetailed(pgn: string, depth = analysisDepth): Promise<AnalyzeGameResponseDto> {
     const engine = await StockfishEngine.create();
 
     try {
-      return await analyzeMoves(pgn, engine);
+      return await analyzeMoves(pgn, engine, normalizeDepth(depth));
     } finally {
       engine.close();
     }
   }
 }
 
-async function analyzeMoves(pgn: string, engine: StockfishEngine): Promise<GameAnalysisEntry[]> {
+async function analyzeMoves(pgn: string, engine: StockfishEngine, depth: number): Promise<AnalyzeGameResponseDto> {
   const moveTokens = tokenizeMoves(pgn);
-  const analysis: GameAnalysisEntry[] = [];
+  const moves: AnalyzeGameMoveDto[] = [];
+  const losses: Record<Color, number[]> = { black: [], white: [] };
+  const summary = {
+    blunders: { black: 0, white: 0 },
+    mistakes: { black: 0, white: 0 },
+    inaccuracies: { black: 0, white: 0 }
+  };
   let state = parseFEN(initialFen);
 
-  for (const [index, token] of moveTokens.entries()) {
+  for (const token of moveTokens) {
     const playedMove = resolveMove(state, token);
-    const best = await engine.search(toFEN(state), analysisDepth);
+    const movingColor = state.turn;
+    const best = await engine.search(toFEN(state), depth);
     const bestMove = parseUciMove(best.bestMove);
     const nextState = applyMove(state, playedMove.from, playedMove.to, playedMove.promotion);
-    const playedResponse = await engine.search(toFEN(nextState), analysisDepth);
+    const playedResponse = await engine.search(toFEN(nextState), depth);
     const playedScoreForMover = -playedResponse.scoreCp;
-    const centipawnLoss = best.scoreCp - playedScoreForMover;
+    const centipawnLoss = Math.max(0, best.scoreCp - playedScoreForMover);
     const bestMoveMatches =
       bestMove?.from === playedMove.from &&
       bestMove.to === playedMove.to &&
       (bestMove.promotion ?? "queen") === (playedMove.promotion ?? "queen");
-    const mistake = !bestMoveMatches && centipawnLoss > centipawnMistakeThreshold;
+    const classification = bestMoveMatches ? "best" : classifyMove(centipawnLoss);
+    const bestMoveSan = bestMove ? formatSanMove(state, bestMove) : "";
 
-    analysis.push({
-      move: index + 1,
-      mistake,
-      suggestion: mistake && bestMove ? formatSanMove(state, bestMove) : ""
+    losses[movingColor].push(bestMoveMatches ? 0 : centipawnLoss);
+    incrementSummary(summary, movingColor, classification);
+
+    moves.push({
+      moveNumber: state.fullmoveNumber,
+      color: movingColor,
+      san: formatSanMove(state, playedMove),
+      eval: scoreForWhite(movingColor, playedScoreForMover),
+      classification,
+      bestMove: bestMoveSan,
+      comment: createMoveComment(classification, bestMoveSan)
     });
 
     state = nextState;
   }
 
-  return analysis;
+  return {
+    accuracy: {
+      white: calculateAccuracy(losses.white),
+      black: calculateAccuracy(losses.black)
+    },
+    moves,
+    summary
+  };
 }
 
 class StockfishEngine {
@@ -230,13 +267,79 @@ function parseScore(line: string): number | null {
   return Math.sign(mate) * (100_000 - Math.abs(mate) * 1_000);
 }
 
+function normalizeDepth(depth: number): number {
+  return Math.min(24, Math.max(1, Math.floor(depth)));
+}
+
+function classifyMove(centipawnLoss: number): MoveClassification {
+  if (centipawnLoss < 10) {
+    return "best";
+  }
+
+  if (centipawnLoss < 50) {
+    return "good";
+  }
+
+  if (centipawnLoss < 150) {
+    return "inaccuracy";
+  }
+
+  if (centipawnLoss < 300) {
+    return "mistake";
+  }
+
+  return "blunder";
+}
+
+function incrementSummary(
+  summary: AnalyzeGameResponseDto["summary"],
+  color: Color,
+  classification: MoveClassification
+): void {
+  if (classification === "inaccuracy") {
+    summary.inaccuracies[color] += 1;
+  } else if (classification === "mistake") {
+    summary.mistakes[color] += 1;
+  } else if (classification === "blunder") {
+    summary.blunders[color] += 1;
+  }
+}
+
+function calculateAccuracy(losses: number[]): number {
+  if (losses.length === 0) {
+    return 100;
+  }
+
+  const averageLoss = losses.reduce((sum, loss) => sum + loss, 0) / losses.length;
+
+  return roundOne(Math.max(0, Math.min(100, 100 - averageLoss * 0.16)));
+}
+
+function roundOne(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function scoreForWhite(movingColor: Color, scoreForMover: number): number {
+  const centipawns = movingColor === "white" ? scoreForMover : -scoreForMover;
+
+  return roundOne(centipawns / 100);
+}
+
+function createMoveComment(classification: MoveClassification, bestMove: string): string | undefined {
+  if (classification === "best" || classification === "good" || !bestMove) {
+    return undefined;
+  }
+
+  return `Лучше было ${bestMove}, сохраняя позицию точнее`;
+}
+
 function tokenizeMoves(pgn: string): string[] {
   return pgn
     .replace(/\{[^}]*}/g, " ")
     .replace(/\([^)]*\)/g, " ")
     .split(/\s+/)
     .map((token) => token.trim())
-    .filter((token) => token && !/^\d+\.+$/.test(token) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(token));
+    .filter((token) => token && token !== "e.p." && !/^\d+\.+$/.test(token) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(token));
 }
 
 function resolveMove(state: BoardState, token: string): Move {

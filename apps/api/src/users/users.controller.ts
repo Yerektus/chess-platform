@@ -1,5 +1,6 @@
 import { Body, Controller, Get, NotFoundException, Param, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { UpdateUserPreferencesDto } from "./dto/update-user-preferences.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UserResponseDto } from "./dto/user-response.dto";
 import { type UserDocument } from "./schemas/user.schema";
@@ -43,6 +44,21 @@ export class UsersController {
 
     return toUserResponse(user);
   }
+
+  @Patch("me/preferences")
+  @UseGuards(JwtAuthGuard)
+  async updatePreferences(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateUserPreferencesDto
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.updatePreferencesById(getAuthenticatedUserId(request), dto);
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    return toUserResponse(user);
+  }
 }
 
 type AuthenticatedRequest = {
@@ -72,6 +88,7 @@ function toUserResponse(user: UserDocument): UserResponseDto {
     elo: user.elo,
     plan: user.plan,
     city: user.city,
+    preferences: user.preferences,
     createdAt: user.createdAt.toISOString()
   };
 }

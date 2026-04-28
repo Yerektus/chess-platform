@@ -5,6 +5,13 @@ export type AuthUser = {
   elo: number;
   plan: "free" | "pro";
   city?: string;
+  preferences?: {
+    boardTheme: string;
+    pieceStyle: string;
+    highlightColor: string;
+    animations: boolean;
+    sounds: boolean;
+  };
   createdAt: string;
 };
 

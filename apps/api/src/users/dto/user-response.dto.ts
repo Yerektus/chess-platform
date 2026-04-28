@@ -7,5 +7,12 @@ export class UserResponseDto {
   elo!: number;
   plan!: UserPlan;
   city?: string;
+  preferences?: {
+    boardTheme: string;
+    pieceStyle: string;
+    highlightColor: string;
+    animations: boolean;
+    sounds: boolean;
+  };
   createdAt!: string;
 }

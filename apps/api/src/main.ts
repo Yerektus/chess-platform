@@ -8,11 +8,14 @@ async function bootstrap() {
     rawBody: true
   });
   const configService = app.get(ConfigService);
-  const webOrigin = configService.get<string>("WEB_ORIGIN") ?? "http://localhost:3000";
-  const port = configService.get<number>("PORT") ?? 3001;
+  const corsOrigins = [
+    configService.get<string>("WEB_ORIGIN") ?? "http://localhost:3000",
+    configService.get<string>("LANDING_ORIGIN") ?? "http://localhost:5000"
+  ];
+  const port = configService.get<number>("API_PORT") ?? configService.get<number>("PORT") ?? 8080;
 
   app.enableCors({
-    origin: webOrigin,
+    origin: corsOrigins,
     credentials: true
   });
   app.useGlobalPipes(

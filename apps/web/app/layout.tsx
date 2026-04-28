@@ -28,13 +28,12 @@ const themeInitScript = `
 (function () {
   try {
     var theme = window.localStorage.getItem("theme");
-    if (theme === "dark") {
-      document.documentElement.dataset.theme = "dark";
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
+    var activeTheme = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = activeTheme;
+    document.documentElement.style.colorScheme = activeTheme;
   } catch (error) {
-    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.dataset.theme = "dark";
+    document.documentElement.style.colorScheme = "dark";
   }
 })();
 `;

@@ -1,41 +1,36 @@
 "use client";
 
-import { Button, ThemeToggle } from "@chess-platform/ui";
+import { Button } from "@chess-platform/ui";
 import Link from "next/link";
-import { useState } from "react";
 
-export function LandingNavigation({ loginHref }: { loginHref: string }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-
+export function LandingNavigation({ loginHref, signUpHref }: { loginHref: string; signUpHref: string }) {
   return (
-    <header className="border-b border-[var(--color-border)]">
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-5 md:px-12">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="min-h-11 py-3 text-[15px] font-medium">
-            Chess Platform
-          </Link>
-          <Button className="min-h-11 md:hidden" onClick={() => setMenuOpen((open) => !open)} variant="ghost">
-            {menuOpen ? "Close" : "Menu"}
-          </Button>
-        </div>
+    <header className="sticky top-0 z-30 border-b border-[#242424] bg-[#1a1a1a]/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-6 overflow-x-auto px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="shrink-0 text-[15px] font-bold text-white">
+          Chess Platform
+        </Link>
 
-        <nav
-          className={
-            menuOpen
-              ? "flex flex-col gap-2 text-[13px] text-[var(--color-text-secondary)] md:flex md:flex-row md:items-center md:justify-end md:gap-5"
-              : "hidden text-[13px] text-[var(--color-text-secondary)] md:flex md:items-center md:justify-end md:gap-5"
-          }
-        >
-          <Link href="#features" className="min-h-11 py-3 hover:text-[var(--color-text-primary)] md:min-h-0 md:py-0">
-            Features
+        <nav className="flex min-w-max flex-1 items-center gap-6 text-[13px] font-medium text-[#a0a0a0]">
+          <Link href="#play" className="border-b-2 border-[#81b64c] py-5 text-[#81b64c]">
+            Play
           </Link>
-          <Link href="#pricing" className="min-h-11 py-3 hover:text-[var(--color-text-primary)] md:min-h-0 md:py-0">
-            Pricing
+          <Link href="#premium" className="py-5 transition-colors hover:text-white">
+            Premium
           </Link>
-          <Link href={loginHref} className="min-h-11 py-3 hover:text-[var(--color-text-primary)] md:min-h-0 md:py-0">
-            Log in
+          <Link href="#customization" className="py-5 transition-colors hover:text-white">
+            Customization
           </Link>
-          <ThemeToggle className="mt-2 min-h-11 self-start md:mt-0" />
+          <Button asChild className="ml-auto h-9 rounded-[8px] border-[#81b64c] px-4 text-[13px]" variant="ghost">
+            <Link href={loginHref}>
+              Log In
+            </Link>
+          </Button>
+          <Button asChild className="h-9 rounded-[8px] px-4 text-[13px] font-semibold">
+            <Link href={signUpHref}>
+              Sign Up
+            </Link>
+          </Button>
         </nav>
       </div>
     </header>

@@ -524,7 +524,7 @@ function allSquares(): Square[] {
 }
 
 function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 }
 
 function capitalize(value: string): string {

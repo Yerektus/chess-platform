@@ -27,3 +27,11 @@ textarea,
 select {
   font: inherit;
 }
+
+.board-container {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

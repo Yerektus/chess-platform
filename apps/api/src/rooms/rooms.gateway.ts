@@ -20,7 +20,10 @@ import { RoomsService } from "./rooms.service";
 @WebSocketGateway({
   namespace: "/rooms",
   cors: {
-    origin: process.env.WEB_ORIGIN ?? "http://localhost:3000",
+    origin: [
+      process.env.WEB_ORIGIN ?? "http://localhost:3000",
+      process.env.LANDING_ORIGIN ?? "http://localhost:5000"
+    ],
     credentials: true
   }
 })

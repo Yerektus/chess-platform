@@ -12,6 +12,8 @@ import {
   UseGuards
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { AnalyzeGameDto } from "./dto/analyze-game.dto";
+import { AnalyzeGameResponseDto } from "./dto/analyze-game-response.dto";
 import { CreateGameDto } from "./dto/create-game.dto";
 import { GameHistoryResponseDto } from "./dto/game-history-response.dto";
 import { GameResponseDto } from "./dto/game-response.dto";
@@ -52,6 +54,11 @@ export class GamesController {
       limit: history.limit,
       total: history.total
     };
+  }
+
+  @Post("analyze")
+  async analyzePgn(@Body() dto: AnalyzeGameDto): Promise<AnalyzeGameResponseDto> {
+    return this.gamesService.analyzePgn(dto.pgn, dto.depth);
   }
 
   @Get(":id")

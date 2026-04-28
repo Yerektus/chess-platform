@@ -3,13 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3002",
+    "dev": "node ../../packages/config/next-dev.cjs landing",
     "build": "next build",
     "lint": "next lint",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@chess-platform/ui": "workspace:*",
+    "@stripe/stripe-js": "^9.3.1",
     "next": "^14.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

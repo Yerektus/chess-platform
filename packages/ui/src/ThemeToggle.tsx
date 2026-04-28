@@ -11,18 +11,18 @@ export type ThemeToggleProps = {
 };
 
 export function ThemeToggle({ className, onThemeChange }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<ThemeName>("light");
+  const [theme, setTheme] = useState<ThemeName>("dark");
 
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    const activeTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+
+    document.documentElement.dataset.theme = activeTheme;
+    setTheme(activeTheme);
   }, []);
 
   const selectTheme = (nextTheme: ThemeName) => {
-    if (nextTheme === "dark") {
-      document.documentElement.dataset.theme = "dark";
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
 
     try {
       window.localStorage.setItem("theme", nextTheme);
