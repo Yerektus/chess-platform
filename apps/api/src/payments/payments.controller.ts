@@ -1,4 +1,4 @@
-import { Controller, Headers, HttpCode, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, Headers, HttpCode, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { type RawBodyRequest } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PaymentsService } from "./payments.service";
@@ -11,6 +11,19 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   async createCheckoutSession(@Req() request: AuthenticatedRequest): Promise<{ url: string }> {
     return this.paymentsService.createCheckoutSession(getAuthenticatedUserId(request));
+  }
+
+  @Get("subscription")
+  @UseGuards(JwtAuthGuard)
+  async getSubscription(@Req() request: AuthenticatedRequest): Promise<{ subscription: any; nextBillingDate: string | null }> {
+    return this.paymentsService.getSubscription(getAuthenticatedUserId(request));
+  }
+
+  @Post("cancel-subscription")
+  @UseGuards(JwtAuthGuard)
+  async cancelSubscription(@Req() request: AuthenticatedRequest): Promise<{ success: boolean }> {
+    await this.paymentsService.cancelSubscription(getAuthenticatedUserId(request));
+    return { success: true };
   }
 
   @Post("webhook")

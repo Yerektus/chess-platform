@@ -50,6 +50,80 @@ export class PaymentsService {
     return { url: session.url };
   }
 
+  async getSubscription(userId: string): Promise<{ subscription: any; nextBillingDate: string | null }> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    const customer = await this.findOrCreateCustomer(user.email, userId);
+
+    const subscriptions = await this.stripe.subscriptions.list({
+      customer: customer.id,
+      limit: 1,
+      status: "active"
+    });
+
+    if (subscriptions.data.length === 0) {
+      return { subscription: null, nextBillingDate: null };
+    }
+
+    const subscription = subscriptions.data[0];
+    const nextBillingDate = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
+
+    return {
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        priceId: subscription.items.data[0]?.price.id
+      },
+      nextBillingDate
+    };
+  }
+
+  async cancelSubscription(userId: string): Promise<void> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    const customer = await this.findOrCreateCustomer(user.email, userId);
+
+    const subscriptions = await this.stripe.subscriptions.list({
+      customer: customer.id,
+      limit: 1,
+      status: "active"
+    });
+
+    if (subscriptions.data.length === 0) {
+      throw new BadRequestException("No active subscription found");
+    }
+
+    const subscription = subscriptions.data[0];
+
+    await this.stripe.subscriptions.cancel(subscription.id);
+
+    await this.usersService.updatePlanById(userId, "free");
+  }
+
+  private async findOrCreateCustomer(email: string, userId: string): Promise<Stripe.Customer> {
+    const customers = await this.stripe.customers.list({
+      email,
+      limit: 1
+    });
+
+    if (customers.data.length > 0) {
+      return customers.data[0];
+    }
+
+    return this.stripe.customers.create({
+      email,
+      metadata: { userId }
+    });
+  }
+
   async handleWebhook(rawBody: Buffer | undefined, signature: string | undefined): Promise<void> {
     if (!rawBody || !signature) {
       throw new BadRequestException("Missing Stripe webhook payload or signature");
@@ -70,6 +144,10 @@ export class PaymentsService {
     if (event.type === "checkout.session.completed") {
       await this.handleCheckoutCompleted(event.data.object as StripeCheckoutSession);
     }
+
+    if (event.type === "customer.subscription.deleted") {
+      await this.handleSubscriptionDeleted(event.data.object as StripeSubscription);
+    }
   }
 
   private async handleCheckoutCompleted(session: StripeCheckoutSession): Promise<void> {
@@ -86,6 +164,22 @@ export class PaymentsService {
     }
   }
 
+  private async handleSubscriptionDeleted(subscription: StripeSubscription): Promise<void> {
+    const userId = subscription.metadata?.userId;
+
+    if (!userId) {
+      return;
+    }
+
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      return;
+    }
+
+    await this.usersService.updatePlanById(userId, "free");
+  }
+
   private get webOrigin(): string {
     return this.configService.get<string>("WEB_ORIGIN") ?? "http://localhost:3000";
   }
@@ -100,3 +194,4 @@ function createStripeClient(secretKey: string) {
 type StripeClient = ReturnType<typeof createStripeClient>;
 type StripeEvent = ReturnType<StripeClient["webhooks"]["constructEvent"]>;
 type StripeCheckoutSession = Awaited<ReturnType<StripeClient["checkout"]["sessions"]["create"]>>;
+type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["retrieve"]>>;

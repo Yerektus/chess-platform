@@ -12,6 +12,7 @@ COPY apps/api/package.json apps/api/package.json
 COPY packages/chess-engine/package.json packages/chess-engine/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/types/package.json packages/types/package.json
+COPY packages/ui/package.json packages/ui/package.json
 
 RUN pnpm install --frozen-lockfile
 
@@ -36,6 +37,7 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/packages/chess-engine/package.json ./packages/chess-engine/package.json
 COPY --from=builder /app/packages/chess-engine/dist ./packages/chess-engine/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
+COPY --from=builder /app/packages/types/dist ./packages/types/dist
 
 EXPOSE 8080
 
