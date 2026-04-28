@@ -4,7 +4,12 @@ loadRootEnv();
 applyLocalDefaults();
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  experimental: {
+    externalDir: true
+  },
+  transpilePackages: ["@chess-platform/ui", "@chess-platform/chess-engine", "@chess-platform/types"]
+};
 
 function applyLocalDefaults() {
   const apiPort = process.env.API_PORT ?? "8080";
