@@ -546,19 +546,9 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
       className="min-h-[calc(100vh-64px)] bg-[var(--color-bg)] px-4 py-5 text-[var(--color-text-primary)] md:px-6"
       style={boardThemeStyle}
     >
-      <div className="grid min-h-[calc(100vh-104px)] gap-5 lg:grid-cols-[minmax(176px,1fr)_minmax(320px,620px)_minmax(320px,1fr)] lg:items-center">
-        <aside className="hidden lg:flex lg:flex-col lg:gap-4">
-          <GameSummary
-            activeMode={activeMode}
-            capturedPieces={capturedPieces}
-            isAiThinking={isAiThinking}
-            isStockfishReady={isStockfishReady}
-            stockfishError={stockfishError}
-          />
-        </aside>
-
-        <section className="board-container min-h-[calc(100vh-136px)]">
-          <div className="flex w-full max-w-[min(100%,620px)] flex-col gap-3">
+      <div className={`flex flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center ${gameStarted ? "lg:gap-8" : ""}`}>
+        <section className={`board-container ${gameStarted ? "w-full max-w-[700px]" : "w-full max-w-[520px]"}`}>
+          <div className={`flex w-full flex-col gap-3 ${gameStarted ? "max-w-[700px] mx-auto" : "max-w-[520px] mx-auto"}`}>
             {gameStarted ? (
               <>
                 <PlayerInfo
@@ -569,7 +559,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
                 />
                 <TurnBanner isViewingHistory={viewedPly !== null} turn={displayedState.turn} />
                 <ChessBoard
-                  className="mx-auto max-w-[min(100vw_-_32px,620px)]"
+                  className={`mx-auto ${gameStarted ? "max-w-[700px]" : "max-w-[min(100vw_-_32px,520px)]"}`}
                   lastMove={displayedLastMove}
                   legalMoves={viewedPly === null ? legalMoves : []}
                   onSquareClick={handleSquareClick}
@@ -612,53 +602,17 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
           </div>
         </section>
 
-        <div className="lg:hidden">
-          <Button className="min-h-11 w-full" onClick={() => setShowMobileSidebar((visible) => !visible)} variant="ghost">
-            {showMobileSidebar ? "Скрыть панель" : "Режимы и история"}
-          </Button>
-        </div>
+        {gameStarted && (
+          <aside className={showMobileSidebar ? "flex w-full flex-col gap-4 lg:hidden" : "hidden lg:flex lg:flex-col lg:gap-4 lg:w-[320px]"}>
+            <MoveHistory
+              currentPly={currentPly}
+              onCopyPgn={handleCopyPgn}
+              onHoverMove={setHoverMove}
+              onNavigate={(ply) => setViewedPly(ply === moveHistory.length ? null : ply)}
+              rows={moveRows}
+              totalPly={moveHistory.length}
+            />
 
-        <aside className={showMobileSidebar ? "flex w-full flex-col gap-4" : "hidden w-full flex-col gap-4 lg:flex"}>
-          <GameModeSelector activeMode={activeMode} gameStarted={gameStarted} onModeChange={(nextMode) => {
-            setActiveMode(nextMode);
-            setGameStarted(false);
-            setIsSearching(false);
-            resetPosition();
-          }} />
-
-          <Card className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-[18px] font-medium leading-[1.2]">Настройки</h2>
-                <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
-                  Тема, фигуры и Premium-функции.
-                </p>
-              </div>
-              <Button className="h-10 w-10 px-0" onClick={() => setShowCustomization(true)} variant="ghost">
-                🎨
-              </Button>
-            </div>
-            {!isPremium ? (
-              <Button onClick={() => setShowSubscription(true)} variant="ghost">
-                👑 Открыть Premium
-              </Button>
-            ) : (
-              <p className="rounded-[6px] border border-[var(--color-accent)] px-3 py-2 text-[13px] text-[var(--color-accent)]">
-                Premium активен
-              </p>
-            )}
-          </Card>
-
-          <MoveHistory
-            currentPly={currentPly}
-            onCopyPgn={handleCopyPgn}
-            onHoverMove={setHoverMove}
-            onNavigate={(ply) => setViewedPly(ply === moveHistory.length ? null : ply)}
-            rows={moveRows}
-            totalPly={moveHistory.length}
-          />
-
-          {gameStarted ? (
             <Card className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <Button disabled={isAiThinking} onClick={() => setResult(createResignationResult(state.turn))} variant="ghost">
@@ -672,8 +626,14 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
                 Новая партия
               </Button>
             </Card>
-          ) : null}
-        </aside>
+          </aside>
+        )}
+
+        <div className="lg:hidden">
+          <Button className="min-h-11 w-full" onClick={() => setShowMobileSidebar((visible) => !visible)} variant="ghost">
+            {showMobileSidebar ? "Скрыть панель" : "Панель"}
+          </Button>
+        </div>
       </div>
 
       <ResultModal
