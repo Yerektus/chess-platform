@@ -196,7 +196,9 @@ function createStripeClient(secretKey: string) {
 type StripeClient = ReturnType<typeof createStripeClient>;
 type StripeEvent = ReturnType<StripeClient["webhooks"]["constructEvent"]>;
 type StripeCheckoutSession = Awaited<ReturnType<StripeClient["checkout"]["sessions"]["create"]>>;
-type StripeCustomer = Stripe.Customer;
+type StripeCustomer = {
+  id: string;
+};
 type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["list"]>>["data"][number] & {
   current_period_end?: number | null;
 };
