@@ -1189,57 +1189,113 @@ function CustomizationModal({
   settings: CustomizationSettings;
 }) {
   const [draft, setDraft] = useState(settings);
+  const [activeTab, setActiveTab] = useState<"board" | "pieces" | "other">("board");
 
   useEffect(() => {
     setDraft(settings);
   }, [settings, open]);
 
   return (
-    <Modal className="max-w-[760px]" onClose={onClose} open={open} title="🎨 Кастомизация">
-      <div className="grid gap-5">
-        <CustomizationGrid
-          items={Object.entries(pieceStyles).map(([value, item]) => ({ ...item, value: value as CustomizationSettings["pieceStyle"] }))}
-          label="Стиль фигур"
-          onSelect={(value) => setDraft((current) => ({ ...current, pieceStyle: value }))}
-          selected={draft.pieceStyle}
-          isPremium={isPremium}
-        />
-        <CustomizationGrid
-          items={Object.entries(boardThemes).map(([value, item]) => ({ ...item, preview: item.label, value: value as CustomizationSettings["boardTheme"] }))}
-          label="Тема доски"
-          onSelect={(value) => setDraft((current) => ({ ...current, boardTheme: value }))}
-          selected={draft.boardTheme}
-          isPremium={isPremium}
-        />
-        <fieldset className="grid gap-2">
-          <legend className="text-[14px] text-[var(--color-text-secondary)]">Цвет подсветки ходов</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "🟡 Жёлтый", value: "#f0c040" },
-              { label: "🔵 Синий", value: "#3b82f6" },
-              { label: "🟢 Зелёный", value: "#81b64c" }
-            ].map((option) => (
-              <button
-                className={`min-h-10 rounded-[6px] border px-3 text-[14px] ${draft.highlightColor === option.value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"}`}
-                key={option.value}
-                onClick={() => setDraft((current) => ({ ...current, highlightColor: option.value as CustomizationSettings["highlightColor"] }))}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <div className="grid gap-2 text-[14px]">
-          <ToggleRow label="Анимация ходов" checked={draft.animations} onChange={(value) => setDraft((current) => ({ ...current, animations: value }))} />
-          <ToggleRow label="Звуки" checked={draft.sounds} onChange={(value) => setDraft((current) => ({ ...current, sounds: value }))} />
+    <Modal className="max-w-[420px]" onClose={onClose} open={open} showCloseButton={false} title="🎨">
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-1 rounded-[8px] border border-[var(--color-border)] p-1">
+          {(["board", "pieces", "other"] as const).map((tab) => (
+            <button
+              className={`flex-1 rounded-[6px] px-3 py-2 text-[13px] transition-colors ${activeTab === tab ? "bg-[var(--color-accent)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              type="button"
+            >
+              {tab === "board" ? "Доска" : tab === "pieces" ? "Фигуры" : "Прочее"}
+            </button>
+          ))}
         </div>
-        <div className="rounded-[8px] border border-[var(--color-border)] p-4" style={getBoardThemeStyle(draft)}>
-          <div className="mb-2 text-[14px] text-[var(--color-text-secondary)]">Превью</div>
-          <div className="grid max-w-[240px] grid-cols-6 overflow-hidden rounded-[6px] border border-[var(--color-border)] font-mono text-[22px]">
-            {["♖", "", "", "", "♔", "", "", "♙", "", "", "", ""].map((piece, index) => (
+
+        {activeTab === "board" && (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(boardThemes).map(([value, item]) => {
+                const locked = item.premium && !isPremium;
+                return (
+                  <button
+                    className={`aspect-square rounded-[8px] border-2 ${draft.boardTheme === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
+                    disabled={locked}
+                    key={value}
+                    onClick={() => setDraft((current) => ({ ...current, boardTheme: value as CustomizationSettings["boardTheme"] }))}
+                    style={{ background: item.light }}
+                    title={locked ? "🔒 Premium" : item.label}
+                    type="button"
+                  >
+                    <div className="flex h-full w-full items-center justify-center">
+                      <div className="h-4 w-4 rounded" style={{ background: item.dark }} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-[var(--color-text-secondary)]">Цвет подсветки</span>
+              <div className="flex gap-2">
+                {isPremium && (
+                  <button
+                    className={`h-7 w-7 rounded-full border-2 ${draft.highlightColor === "#cc3030" ? "border-[var(--color-text-primary)]" : "border-transparent"}`}
+                    onClick={() => setDraft((current) => ({ ...current, highlightColor: "#cc3030" as CustomizationSettings["highlightColor"] }))}
+                    style={{ background: "#cc3030" }}
+                    title="🔴 Красный (Premium)"
+                    type="button"
+                  />
+                )}
+                {["#f0c040", "#3b82f6", "#81b64c"].map((color) => (
+                  <button
+                    className={`h-7 w-7 rounded-full border-2 ${draft.highlightColor === color ? "border-[var(--color-text-primary)]" : "border-transparent"}`}
+                    key={color}
+                    onClick={() => setDraft((current) => ({ ...current, highlightColor: color as CustomizationSettings["highlightColor"] }))}
+                    style={{ background: color }}
+                    type="button"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "pieces" && (
+          <div className="grid grid-cols-4 gap-2">
+            {Object.entries(pieceStyles).map(([value, item]) => {
+              const locked = item.premium && !isPremium;
+              return (
+                <button
+                  className={`aspect-square rounded-[8px] border-2 flex items-center justify-center ${draft.pieceStyle === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
+                  disabled={locked}
+                  key={value}
+                  onClick={() => setDraft((current) => ({ ...current, pieceStyle: value as CustomizationSettings["pieceStyle"] }))}
+                  type="button"
+                >
+                  <span className="text-[20px] leading-none">{locked ? "🔒" : item.preview.split("")[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {activeTab === "other" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-[var(--color-text-secondary)]">Анимация</span>
+              <ToggleSwitch checked={draft.animations} onChange={(value) => setDraft((current) => ({ ...current, animations: value }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-[var(--color-text-secondary)]">Звуки</span>
+              <ToggleSwitch checked={draft.sounds} onChange={(value) => setDraft((current) => ({ ...current, sounds: value }))} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 rounded-[8px] border border-[var(--color-border)] p-3" style={getBoardThemeStyle(draft)}>
+          <div className="grid w-14 grid-cols-4 gap-[2px] font-mono text-sm">
+            {["♖", "", "♔", "", "♙", "", "", ""].map((piece, index) => (
               <div
-                className="flex aspect-square items-center justify-center"
+                className="aspect-square flex items-center justify-center text-[var(--color-text-primary)]"
                 key={index}
                 style={{ background: index % 2 === 0 ? "var(--color-square-light)" : "var(--color-square-dark)" }}
               >
@@ -1247,10 +1303,31 @@ function CustomizationModal({
               </div>
             ))}
           </div>
+          <span className="text-[12px] text-[var(--color-text-secondary)]">Превью</span>
         </div>
-        <Button onClick={() => onSave(draft)}>Сохранить настройки</Button>
+
+        <div className="flex gap-2">
+          <Button className="flex-1" onClick={onClose} variant="ghost">
+            Отмена
+          </Button>
+          <Button className="flex-1" onClick={() => onSave(draft)}>
+            Сохранить
+          </Button>
+        </div>
       </div>
     </Modal>
+  );
+}
+
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
+  return (
+    <button
+      className={`relative h-6 w-11 rounded-full transition-colors ${checked ? "bg-[var(--color-accent)]" : "bg-[var(--color-border)]"}`}
+      onClick={() => onChange(!checked)}
+      type="button"
+    >
+      <span className={`absolute top-0.5 block h-5 w-5 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
+    </button>
   );
 }
 

@@ -25,13 +25,13 @@ export function SiteNavigation() {
 
         <nav className="flex min-w-max flex-1 items-center gap-7 text-[13px] font-medium text-[var(--color-text-secondary)]">
           <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/game/local">
-            Play
+            Играть
           </Link>
           <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/leaderboard">
-            Leaderboard
+            Рейтинг
           </Link>
           <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/profile">
-            Profile
+            Профиль
           </Link>
           <button
             aria-label="Customization"

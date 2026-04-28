@@ -11,9 +11,10 @@ export type ModalProps = {
   children: ReactNode;
   onClose: () => void;
   className?: string;
+  showCloseButton?: boolean;
 };
 
-export function Modal({ open, title, children, onClose, className }: ModalProps) {
+export function Modal({ open, title, children, onClose, className, showCloseButton = true }: ModalProps) {
   if (!open) {
     return null;
   }
@@ -27,9 +28,11 @@ export function Modal({ open, title, children, onClose, className }: ModalProps)
       <Card className={cx("w-full max-w-[480px]", className)}>
         <div className="mb-4 flex items-start justify-between gap-4">
           {title ? <h2 className="text-[18px] font-medium leading-[1.2]">{title}</h2> : <div />}
-          <Button aria-label="Close modal" onClick={onClose} variant="ghost">
-            Close
-          </Button>
+          {showCloseButton ? (
+            <Button aria-label="Close modal" onClick={onClose} variant="ghost">
+              Close
+            </Button>
+          ) : null}
         </div>
         {children}
       </Card>
