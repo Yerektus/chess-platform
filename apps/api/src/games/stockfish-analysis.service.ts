@@ -96,7 +96,8 @@ async function analyzeMoves(pgn: string, engine: StockfishEngine, depth: number)
     const playedScoreForMover = -playedResponse.scoreCp;
     const centipawnLoss = Math.max(0, best.scoreCp - playedScoreForMover);
     const bestMoveMatches =
-      bestMove?.from === playedMove.from &&
+      !!bestMove &&
+      bestMove.from === playedMove.from &&
       bestMove.to === playedMove.to &&
       (bestMove.promotion ?? "queen") === (playedMove.promotion ?? "queen");
     const classification = bestMoveMatches ? "best" : classifyMove(centipawnLoss);

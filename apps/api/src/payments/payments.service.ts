@@ -50,7 +50,7 @@ export class PaymentsService {
     return { url: session.url };
   }
 
-  async getSubscription(userId: string): Promise<{ subscription: any; nextBillingDate: string | null }> {
+  async getSubscription(userId: string): Promise<{ subscription: SubscriptionSummary | null; nextBillingDate: string | null }> {
     const user = await this.usersService.findById(userId);
 
     if (!user) {
@@ -70,13 +70,15 @@ export class PaymentsService {
     }
 
     const subscription = subscriptions.data[0];
-    const nextBillingDate = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
+    const nextBillingDate = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null;
 
     return {
       subscription: {
         id: subscription.id,
         status: subscription.status,
-        priceId: subscription.items.data[0]?.price.id
+        priceId: subscription.items.data[0]?.price.id ?? null
       },
       nextBillingDate
     };
@@ -108,7 +110,7 @@ export class PaymentsService {
     await this.usersService.updatePlanById(userId, "free");
   }
 
-  private async findOrCreateCustomer(email: string, userId: string): Promise<Stripe.Customer> {
+  private async findOrCreateCustomer(email: string, userId: string): Promise<StripeCustomer> {
     const customers = await this.stripe.customers.list({
       email,
       limit: 1
@@ -194,4 +196,13 @@ function createStripeClient(secretKey: string) {
 type StripeClient = ReturnType<typeof createStripeClient>;
 type StripeEvent = ReturnType<StripeClient["webhooks"]["constructEvent"]>;
 type StripeCheckoutSession = Awaited<ReturnType<StripeClient["checkout"]["sessions"]["create"]>>;
-type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["retrieve"]>>;
+type StripeCustomer = Awaited<ReturnType<StripeClient["customers"]["create"]>>;
+type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["list"]>>["data"][number] & {
+  current_period_end?: number | null;
+};
+
+type SubscriptionSummary = {
+  id: string;
+  status: string;
+  priceId: string | null;
+};

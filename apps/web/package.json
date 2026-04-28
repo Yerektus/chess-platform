@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node ../../packages/config/next-dev.cjs web",
+    "prebuild": "pnpm --filter @chess-platform/types build && pnpm --filter @chess-platform/chess-engine build && pnpm --filter @chess-platform/ui build",
     "build": "next build",
     "lint": "next lint",
     "test": "vitest run --passWithNoTests"
