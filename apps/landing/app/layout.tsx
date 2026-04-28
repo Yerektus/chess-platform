@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@chess-platform/ui/tokens.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { SiteNavigation } from "@/components/site-navigation";
+import "@chess-platform/ui/tokens.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
