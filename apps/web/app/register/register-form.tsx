@@ -3,12 +3,10 @@
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button, Card, Input } from "@chess-platform/ui";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 export function RegisterForm() {
   const { register, isLoading } = useAuth();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -23,7 +21,7 @@ export function RegisterForm() {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? "")
       });
-      router.push("/profile");
+      window.location.assign("/profile");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to register");
     }
