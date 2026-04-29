@@ -147,14 +147,10 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
   };
 
   return (
-    <section id="play" className="mx-auto grid max-w-[1280px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:py-10">
-      <div className="flex min-w-0 flex-col items-center gap-4">
-        <PlayerBadge label="Opponent" rating="1840" tone="opponent" />
-        <BoardPreview boardTheme={boardTheme} pieceStyle={pieceStyle} />
-        <PlayerBadge label="Player" rating="1765" tone="player" />
-      </div>
+    <section id="play" className="mx-auto flex max-w-[1280px] flex-col items-center gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <BoardPreview boardTheme={boardTheme} pieceStyle={pieceStyle} />
 
-      <aside className="flex min-w-0 flex-col gap-4">
+      <aside className="grid w-full max-w-[960px] min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,360px)]">
         <section className="grid gap-3" aria-label="Game modes">
           {modeCards.map((mode) => (
             <Link
@@ -247,25 +243,6 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
         </section>
       </aside>
     </section>
-  );
-}
-
-function PlayerBadge({ label, rating, tone }: { label: string; rating: string; tone: "opponent" | "player" }) {
-  const initials = tone === "opponent" ? "OP" : "PL";
-
-  return (
-    <div className="flex w-full max-w-[640px] items-center justify-between rounded-[8px] border border-[#3a3a3a] bg-[#242424] px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#81b64c] text-[12px] font-bold text-[#1a1a1a]">
-          {initials}
-        </div>
-        <div>
-          <p className="text-[15px] font-bold leading-none text-white">{label}</p>
-          <p className="mt-1 text-[12px] text-[#a0a0a0]">Rapid {rating}</p>
-        </div>
-      </div>
-      <span className="h-2.5 w-2.5 rounded-full bg-[#81b64c]" aria-label="Online" />
-    </div>
   );
 }
 
