@@ -28,16 +28,24 @@ const pieceCode: Record<Piece["type"], string> = {
 };
 
 const pieceSetByStyle: Record<ChessPieceStyle, string> = {
-  classic: "cburnett",
+  classic: "wikipedia",
   neon: "spatial",
   pixel: "pixel",
   premium: "maestro"
 };
 
-const pieceAssetBaseUrl = "https://raw.githubusercontent.com/lichess-org/lila/master/public/piece";
+const lichessPieceAssetBaseUrl = "https://raw.githubusercontent.com/lichess-org/lila/master/public/piece";
+const wikipediaPieceAssetBaseUrl = "https://chessboardjs.com/img/chesspieces/wikipedia";
 
 export function getChessPieceImageUrl(piece: Piece, styleName: ChessPieceStyle = "classic"): string {
-  return `${pieceAssetBaseUrl}/${pieceSetByStyle[styleName]}/${piece.color[0]}${pieceCode[piece.type]}.svg`;
+  const colorCode = piece.color === "white" ? "w" : "b";
+  const pieceName = `${colorCode}${pieceCode[piece.type]}`;
+
+  if (styleName === "classic") {
+    return `${wikipediaPieceAssetBaseUrl}/${pieceName}.png`;
+  }
+
+  return `${lichessPieceAssetBaseUrl}/${pieceSetByStyle[styleName]}/${pieceName}.svg`;
 }
 
 export function ChessPieceSvg({ piece, styleName = "classic" }: ChessPieceSvgProps) {
