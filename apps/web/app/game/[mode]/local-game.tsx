@@ -701,9 +701,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
                   Ничья
                 </Button>
               </div>
-              <Button disabled={isAiThinking} onClick={resetGame}>
-                Новая партия
-              </Button>
             </Card>
           </aside>
         )}
