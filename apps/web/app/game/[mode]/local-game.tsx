@@ -551,13 +551,13 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     setAnalysisPly(Math.max(0, moveHistory.length - 1));
 
     try {
-      const response = await fetch("/api/analyze", {
+      const response = await fetchWithTimeout("/api/analyze", {
         body: JSON.stringify({ depth: 18, pgn }),
         headers: {
           "Content-Type": "application/json"
         },
         method: "POST"
-      });
+      }, 30_000);
       const payload = (await response.json().catch(() => null)) as AnalysisResult | { message?: string } | null;
 
       if (!response.ok || !isAnalysisResult(payload)) {
@@ -2048,6 +2048,26 @@ function isAnalysisResult(value: AnalysisResult | { message?: string } | null): 
 
 function getResponseMessage(value: AnalysisResult | { message?: string } | null): string | undefined {
   return value && "message" in value ? value.message : undefined;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Анализ занял слишком много времени. Попробуйте ещё раз.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 function classificationIcon(classification: MoveClassification): string {

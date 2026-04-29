@@ -49,8 +49,9 @@ type SearchWaiter = {
 const requireFromHere = createRequire(__filename);
 const enginePath = requireFromHere.resolve("stockfish/bin/stockfish-18-lite-single.js");
 const initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-const analysisDepth = 18;
-const engineTimeoutMs = 120_000;
+const analysisDepth = 8;
+const engineTimeoutMs = 15_000;
+const searchMoveTimeMs = 350;
 
 @Injectable()
 export class StockfishAnalysisService {
@@ -178,7 +179,7 @@ class StockfishEngine {
       };
 
       this.send(`position fen ${fen}`);
-      this.send(`go depth ${depth}`);
+      this.send(`go depth ${depth} movetime ${searchMoveTimeMs}`);
     });
   }
 
@@ -269,7 +270,7 @@ function parseScore(line: string): number | null {
 }
 
 function normalizeDepth(depth: number): number {
-  return Math.min(24, Math.max(1, Math.floor(depth)));
+  return Math.min(10, Math.max(1, Math.floor(depth)));
 }
 
 function classifyMove(centipawnLoss: number): MoveClassification {
