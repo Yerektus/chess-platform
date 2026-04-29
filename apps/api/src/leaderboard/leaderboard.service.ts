@@ -7,8 +7,6 @@ import { LeaderboardEntryDto } from "./dto/leaderboard-entry.dto";
 
 @Injectable()
 export class LeaderboardService {
-  private readonly cache = new Map<string, CacheEntry>();
-  private readonly cacheTtlMs = 5 * 60 * 1000;
   private readonly limit = 100;
 
   constructor(
@@ -18,13 +16,6 @@ export class LeaderboardService {
 
   async getTopUsers(city?: string): Promise<LeaderboardEntryDto[]> {
     const normalizedCity = normalizeCity(city);
-    const cacheKey = normalizedCity ? `city:${normalizedCity}` : "global";
-    const cached = this.cache.get(cacheKey);
-
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.data;
-    }
-
     const users = await this.userModel
       .find(normalizedCity ? { city: normalizedCity } : {})
       .select({ _id: 1, username: 1, elo: 1, city: 1 })
@@ -34,20 +25,14 @@ export class LeaderboardService {
       .exec();
 
     const gamesPlayedByUserId = await this.getGamesPlayedByUserId(users.map((user) => user._id));
-    const data = users.map((user, index) => ({
+
+    return users.map((user, index) => ({
       rank: index + 1,
       username: user.username,
       elo: user.elo,
       city: user.city ?? null,
       gamesPlayed: gamesPlayedByUserId.get(user._id.toString()) ?? 0
     }));
-
-    this.cache.set(cacheKey, {
-      data,
-      expiresAt: Date.now() + this.cacheTtlMs
-    });
-
-    return data;
   }
 
   private async getGamesPlayedByUserId(userIds: Types.ObjectId[]): Promise<Map<string, number>> {
@@ -85,11 +70,6 @@ export class LeaderboardService {
     return new Map(counts.map((count) => [count._id.toString(), count.gamesPlayed]));
   }
 }
-
-type CacheEntry = {
-  data: LeaderboardEntryDto[];
-  expiresAt: number;
-};
 
 type LeaderboardUser = {
   _id: Types.ObjectId;

@@ -2,7 +2,8 @@ import { apiBaseUrl } from "@/lib/api";
 import { type LeaderboardEntry } from "@/lib/auth-types";
 import { LeaderboardClient } from "./leaderboard-client";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function LeaderboardPage({ searchParams }: { searchParams: { city?: string } }) {
   const city = normalizeCity(searchParams.city);
@@ -20,9 +21,7 @@ async function getLeaderboard(city?: string): Promise<{ entries: LeaderboardEntr
 
   try {
     const response = await fetch(url, {
-      next: {
-        revalidate: 60
-      }
+      cache: "no-store"
     });
 
     if (!response.ok) {
