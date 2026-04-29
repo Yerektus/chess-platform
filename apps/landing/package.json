@@ -6,7 +6,7 @@
     "dev": "node ../../packages/config/next-dev.cjs landing",
     "prebuild": "pnpm --filter @chess-platform/ui build",
     "build": "next build",
-    "start": "next start -p $PORT",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-8080}",
     "lint": "next lint",
     "test": "vitest run --passWithNoTests"
   },
