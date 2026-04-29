@@ -213,7 +213,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisPly, setAnalysisPly] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [gameSaveStatus, setGameSaveStatus] = useState<string | null>(null);
+  const [copyPgnStatus, setCopyPgnStatus] = useState<string | null>(null);
   const [playerClocks, setPlayerClocks] = useState<Record<Color, number>>({ black: 0, white: 0 });
   const clockBaseRef = useRef<Record<Color, number>>({ black: 0, white: 0 });
   const turnStartedAtRef = useRef(Date.now());
@@ -250,7 +250,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     setViewedPly(null);
     setResult(null);
     setIsAiThinking(false);
-    setGameSaveStatus(null);
+    setCopyPgnStatus(null);
     savedGameKeyRef.current = null;
     setPlayerClocks({ black: 0, white: 0 });
   }, []);
@@ -441,7 +441,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     }
 
     savedGameKeyRef.current = gameKey;
-    setGameSaveStatus("Сохраняем партию и обновляем ELO...");
 
     async function saveFinishedGame() {
       try {
@@ -474,11 +473,8 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         if (userResponse.ok) {
           updateUser((await userResponse.json()) as AuthUser);
         }
-
-        setGameSaveStatus("Партия сохранена, ELO обновлён.");
-      } catch (error) {
+      } catch {
         savedGameKeyRef.current = null;
-        setGameSaveStatus(error instanceof Error ? error.message : "Не удалось сохранить партию");
       }
     }
 
@@ -527,8 +523,16 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const handleCopyPgn = async () => {
     const pgn = createPgn(moveRows);
 
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(pgn);
+    if (!pgn) {
+      setCopyPgnStatus("PGN пустой.");
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(pgn);
+      setCopyPgnStatus("PGN скопирован.");
+    } catch {
+      setCopyPgnStatus("Не удалось скопировать PGN.");
     }
   };
 
@@ -726,7 +730,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         }}
         onNewGame={resetGame}
         open={Boolean(result)}
-        ratingStatus={gameSaveStatus}
+        pgnStatus={copyPgnStatus}
         result={result}
         whiteAccuracy={analysisResult?.accuracy.white}
         blackAccuracy={analysisResult?.accuracy.black}
@@ -1021,7 +1025,7 @@ function ResultModal({
   onMenu,
   onNewGame,
   open,
-  ratingStatus,
+  pgnStatus,
   result,
   whiteAccuracy
 }: {
@@ -1036,7 +1040,7 @@ function ResultModal({
   onMenu: () => void;
   onNewGame: () => void;
   open: boolean;
-  ratingStatus: string | null;
+  pgnStatus: string | null;
   result: ResultInfo | null;
   whiteAccuracy?: number;
 }) {
@@ -1063,11 +1067,6 @@ function ResultModal({
           <ResultStat label="Точность белых" value={formatAccuracy(whiteAccuracy)} />
           <ResultStat label="Точность чёрных" value={isPremium ? formatAccuracy(blackAccuracy) : "🔒 Premium"} />
         </div>
-        {ratingStatus ? (
-          <p className="rounded-[6px] border border-[var(--color-border)] px-3 py-2 text-[13px] text-[var(--color-text-secondary)]">
-            {ratingStatus}
-          </p>
-        ) : null}
       </div>
       <div className="grid gap-3 border-t border-[var(--color-border)] px-6 py-5">
         <div className="grid grid-cols-2 gap-3">
@@ -1078,6 +1077,7 @@ function ResultModal({
             📋 PGN
           </Button>
         </div>
+        {pgnStatus ? <p className="text-center text-[13px] text-[var(--color-text-secondary)]">{pgnStatus}</p> : null}
         <Button onClick={onNewGame}>Новая партия</Button>
         <Button onClick={onMenu} variant="ghost">Вернуться в меню</Button>
       </div>
@@ -1994,6 +1994,41 @@ function createPgn(rows: MoveRow[]): string {
   return rows
     .map((row) => `${row.moveNumber}. ${row.white?.notation ?? ""}${row.black ? ` ${row.black.notation}` : ""}`.trim())
     .join(" ");
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall back for browsers that expose the API but block it on insecure origins.
+    }
+  }
+
+  if (typeof document === "undefined") {
+    throw new Error("Clipboard is unavailable");
+  }
+
+  const textarea = document.createElement("textarea");
+
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    const copied = document.execCommand("copy");
+
+    if (!copied) {
+      throw new Error("Copy command failed");
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function createResignationResult(resignedColor: Color): ResultInfo {
