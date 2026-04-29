@@ -3,7 +3,7 @@
 import { Button } from "@chess-platform/ui";
 import { loadStripe } from "@stripe/stripe-js";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type ChessHomeClientProps = {
   aiGameHref: string;
@@ -14,7 +14,6 @@ type ChessHomeClientProps = {
 
 type BoardTheme = "classic" | "blue" | "wood";
 type PieceStyle = "classic" | "neon" | "pixel";
-type InterfaceTheme = "dark" | "light";
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : Promise.resolve(null);
@@ -29,11 +28,6 @@ const pieceStyles: Record<PieceStyle, { label: string }> = {
   classic: { label: "Классик" },
   neon: { label: "Неон" },
   pixel: { label: "Пиксель" }
-};
-
-const interfaceThemes: Record<InterfaceTheme, { label: string }> = {
-  dark: { label: "Тёмный" },
-  light: { label: "Светлый" }
 };
 
 const initialBoard = [
@@ -51,64 +45,7 @@ const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
 export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, profileHref }: ChessHomeClientProps) {
-  const [boardTheme, setBoardTheme] = useState<BoardTheme>("classic");
-  const [pieceStyle, setPieceStyle] = useState<PieceStyle>("classic");
-  const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>("dark");
   const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
-
-  useEffect(() => {
-    try {
-      const savedBoardTheme = window.localStorage.getItem("boardTheme") as BoardTheme | null;
-      const savedPieceStyle = window.localStorage.getItem("pieceStyle") as PieceStyle | null;
-      const savedInterfaceTheme = window.localStorage.getItem("theme") as InterfaceTheme | null;
-
-      if (savedBoardTheme && savedBoardTheme in boardThemes) {
-        setBoardTheme(savedBoardTheme);
-      }
-
-      if (savedPieceStyle && savedPieceStyle in pieceStyles) {
-        setPieceStyle(savedPieceStyle);
-      }
-
-      if (savedInterfaceTheme === "light" || savedInterfaceTheme === "dark") {
-        setInterfaceTheme(savedInterfaceTheme);
-      }
-    } catch {
-      // Keep defaults when storage is unavailable.
-    }
-  }, []);
-
-  useEffect(() => {
-    const theme = boardThemes[boardTheme];
-    document.documentElement.style.setProperty("--color-square-light", theme.light);
-    document.documentElement.style.setProperty("--color-square-dark", theme.dark);
-
-    try {
-      window.localStorage.setItem("boardTheme", boardTheme);
-    } catch {
-      // Keep the active in-memory selection.
-    }
-  }, [boardTheme]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = interfaceTheme;
-
-    try {
-      window.localStorage.setItem("theme", interfaceTheme);
-    } catch {
-      // Keep the active in-memory selection.
-    }
-  }, [interfaceTheme]);
-
-  useEffect(() => {
-    document.documentElement.dataset.pieceStyle = pieceStyle;
-
-    try {
-      window.localStorage.setItem("pieceStyle", pieceStyle);
-    } catch {
-      // Keep the active in-memory selection.
-    }
-  }, [pieceStyle]);
 
   const modeCards = useMemo(
     () => [
@@ -148,7 +85,17 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
 
   return (
     <section id="play" className="mx-auto flex max-w-[1280px] flex-col items-center gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      <BoardPreview boardTheme={boardTheme} pieceStyle={pieceStyle} />
+      <div className="flex w-full max-w-[640px] flex-col gap-4">
+        <div>
+          <h1 className="text-[32px] font-bold leading-[1.1] text-[var(--color-text-primary)] sm:text-[44px]">
+            Play Chess
+          </h1>
+          <p className="mt-2 max-w-[520px] text-[15px] leading-[1.55] text-[var(--color-text-secondary)]">
+            Choose a mode and start a focused chess session.
+          </p>
+        </div>
+        <BoardPreview boardTheme="classic" pieceStyle="classic" />
+      </div>
 
       <aside className="grid w-full max-w-[960px] min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,360px)]">
         <section className="grid gap-3" aria-label="Game modes">
@@ -214,33 +161,6 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
           ) : null}
         </section>
 
-        <section id="customization" className="rounded-[8px] border border-[#3a3a3a] bg-[var(--color-surface)] p-5">
-          <div className="flex items-center gap-3">
-            <span className="text-[24px]" aria-hidden="true">
-              🎨
-            </span>
-            <h2 className="text-[19px] font-bold leading-[1.2] text-white">Кастомизация</h2>
-          </div>
-
-          <CustomizerGroup
-            label="Тема доски:"
-            options={boardThemes}
-            selected={boardTheme}
-            onSelect={(value) => setBoardTheme(value as BoardTheme)}
-          />
-          <CustomizerGroup
-            label="Стиль фигур:"
-            options={pieceStyles}
-            selected={pieceStyle}
-            onSelect={(value) => setPieceStyle(value as PieceStyle)}
-          />
-          <CustomizerGroup
-            label="Интерфейс:"
-            options={interfaceThemes}
-            selected={interfaceTheme}
-            onSelect={(value) => setInterfaceTheme(value as InterfaceTheme)}
-          />
-        </section>
       </aside>
     </section>
   );
@@ -313,40 +233,5 @@ function PieceGlyph({ piece, styleName }: { piece: string; styleName: PieceStyle
     <span className="select-none text-[clamp(32px,7.2vw,60px)] leading-none text-[#151515] drop-shadow-[0_2px_2px_rgba(255,255,255,0.24)]">
       {piece}
     </span>
-  );
-}
-
-function CustomizerGroup<T extends string>({
-  label,
-  onSelect,
-  options,
-  selected
-}: {
-  label: string;
-  onSelect: (value: T) => void;
-  options: Record<T, { label: string }>;
-  selected: T;
-}) {
-  return (
-    <div className="mt-5">
-      <p className="text-[14px] font-semibold text-white">{label}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(Object.entries(options) as Array<[T, { label: string }]>).map(([value, option]) => (
-          <button
-            className={
-              value === selected
-                ? "rounded-[8px] border border-[#81b64c] bg-[#223018] px-3 py-2 text-[13px] font-semibold text-white"
-                : "rounded-[8px] border border-[#3a3a3a] bg-[#242424] px-3 py-2 text-[13px] text-[#a0a0a0] transition hover:border-[#81b64c] hover:text-white"
-            }
-            key={value}
-            onClick={() => onSelect(value)}
-            type="button"
-          >
-            <span className="mr-2">{value === selected ? "●" : "○"}</span>
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }

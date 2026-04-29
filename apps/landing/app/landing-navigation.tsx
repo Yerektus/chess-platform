@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@chess-platform/ui";
+import { Button, ThemeToggle } from "@chess-platform/ui";
 import Link from "next/link";
 
 export function LandingNavigation({ loginHref, signUpHref }: { loginHref: string; signUpHref: string }) {
@@ -12,6 +12,7 @@ export function LandingNavigation({ loginHref, signUpHref }: { loginHref: string
         </Link>
 
         <nav className="ml-auto flex min-w-max items-center gap-3 text-[13px] font-medium text-[#a0a0a0]">
+          <ThemeToggle className="h-9" />
           <Button asChild className="h-9 rounded-[8px] border-[#81b64c] px-4 text-[13px]" variant="ghost">
             <Link href={loginHref}>
               Log In
