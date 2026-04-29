@@ -11,17 +11,8 @@ export function LandingNavigation({ loginHref, signUpHref }: { loginHref: string
           Chess Platform
         </Link>
 
-        <nav className="flex min-w-max flex-1 items-center gap-6 text-[13px] font-medium text-[#a0a0a0]">
-          <Link href="#play" className="border-b-2 border-[#81b64c] py-5 text-[#81b64c]">
-            Play
-          </Link>
-          <Link href="#premium" className="py-5 transition-colors hover:text-white">
-            Premium
-          </Link>
-          <Link href="#customization" className="py-5 transition-colors hover:text-white">
-            Customization
-          </Link>
-          <Button asChild className="ml-auto h-9 rounded-[8px] border-[#81b64c] px-4 text-[13px]" variant="ghost">
+        <nav className="ml-auto flex min-w-max items-center gap-3 text-[13px] font-medium text-[#a0a0a0]">
+          <Button asChild className="h-9 rounded-[8px] border-[#81b64c] px-4 text-[13px]" variant="ghost">
             <Link href={loginHref}>
               Log In
             </Link>

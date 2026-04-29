@@ -1047,7 +1047,7 @@ function AnalysisModal({
   const lastMoveForPly = history[safePly] ? { from: history[safePly].from, to: history[safePly].to } : null;
 
   return (
-    <Modal className="max-w-[980px]" onClose={onClose} open={open} title="🔍 Анализ партии">
+    <Modal className="max-h-[calc(100vh-48px)] max-w-[860px] overflow-y-auto p-5" onClose={onClose} open={open} title="🔍 Анализ партии">
       {isLoading ? (
         <div className="flex min-h-[360px] items-center justify-center text-[15px] text-[var(--color-text-secondary)]">
           Stockfish анализирует партию...
@@ -1055,10 +1055,10 @@ function AnalysisModal({
       ) : error ? (
         <div className="rounded-[8px] border border-[var(--color-border)] p-4 text-[14px] text-[var(--color-text-secondary)]">{error}</div>
       ) : analysis ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(280px,420px)_1fr]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(260px,340px)_1fr]">
           <section className="flex flex-col gap-3">
             <ChessBoard
-              className="max-w-[420px]"
+              className="max-w-[340px]"
               lastMove={lastMoveForPly}
               legalMoves={[]}
               onSquareClick={() => undefined}
@@ -1073,9 +1073,9 @@ function AnalysisModal({
             </div>
             <AnalysisMoveList analysis={analysis} currentPly={safePly} onNavigate={onNavigate} />
           </section>
-          <section className="flex flex-col gap-4">
+          <section className="flex flex-col gap-3">
             <EvaluationChart moves={analysis.moves} />
-            <div className="grid gap-2 rounded-[8px] border border-[var(--color-border)] p-4">
+            <div className="grid gap-2 rounded-[8px] border border-[var(--color-border)] p-3">
               <h3 className="text-[15px] font-medium">Точность</h3>
               <AccuracyLine label="Белые" value={analysis.accuracy.white} />
               {isPremium ? (
@@ -1084,7 +1084,7 @@ function AnalysisModal({
                 <PremiumGate feature="Точность чёрных" />
               )}
             </div>
-            <div className="grid gap-2 rounded-[8px] border border-[var(--color-border)] p-4 text-[14px]">
+            <div className="grid gap-2 rounded-[8px] border border-[var(--color-border)] p-3 text-[14px]">
               <h3 className="text-[15px] font-medium">Итог</h3>
               <ResultStat label="Зевки Б / Ч" value={`${analysis.summary.blunders.white} / ${analysis.summary.blunders.black}`} />
               <ResultStat label="Ошибки Б / Ч" value={`${analysis.summary.mistakes.white} / ${analysis.summary.mistakes.black}`} />
@@ -1111,7 +1111,7 @@ function AnalysisMoveList({
   onNavigate: (ply: number) => void;
 }) {
   return (
-    <div className="max-h-[240px] overflow-y-auto rounded-[8px] border border-[var(--color-border)]">
+    <div className="max-h-[160px] overflow-y-auto rounded-[8px] border border-[var(--color-border)]">
       <table className="w-full border-collapse font-mono text-[13px]">
         <tbody>
           {analysis.moves.map((move, index) => (
@@ -1145,9 +1145,9 @@ function EvaluationChart({ moves }: { moves: AnalysisMove[] }) {
   });
 
   return (
-    <div className="rounded-[8px] border border-[var(--color-border)] p-4">
+    <div className="rounded-[8px] border border-[var(--color-border)] p-3">
       <h3 className="mb-3 text-[15px] font-medium">График оценки позиции</h3>
-      <svg className="h-[180px] w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+      <svg className="h-[130px] w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
         <line stroke="var(--color-border)" strokeWidth="1" x1="0" x2="100" y1="50" y2="50" />
         <polyline fill="none" points={points.join(" ")} stroke="var(--color-accent)" strokeWidth="2" />
       </svg>
