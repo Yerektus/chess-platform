@@ -1,7 +1,7 @@
 "use client";
 
 import { type BoardState, type Square } from "@chess-platform/chess-engine";
-import { ChessPieceSvg } from "./ChessPieces";
+import { ChessPieceSvg, type ChessPieceStyle } from "./ChessPieces";
 import { cx } from "./utils";
 
 export type ChessBoardProps = {
@@ -12,6 +12,7 @@ export type ChessBoardProps = {
   lastMove: { from: Square; to: Square } | null;
   onSquareClick: (square: Square) => void;
   className?: string;
+  pieceStyle?: ChessPieceStyle;
 };
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
@@ -29,7 +30,8 @@ export function ChessBoard({
   legalMoves,
   lastMove,
   onSquareClick,
-  className
+  className,
+  pieceStyle = "classic"
 }: ChessBoardProps) {
   const displayFiles = orientation === "white" ? whiteFiles : blackFiles;
   const displayRanks = orientation === "white" ? whiteRanks : blackRanks;
@@ -84,7 +86,7 @@ export function ChessBoard({
                   {file}
                 </span>
               ) : null}
-              {piece ? <ChessPieceSvg piece={piece} /> : null}
+              {piece ? <ChessPieceSvg piece={piece} styleName={pieceStyle} /> : null}
             </button>
           );
         })

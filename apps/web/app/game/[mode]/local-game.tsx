@@ -12,7 +12,7 @@ import {
   type PieceType,
   type Square
 } from "@chess-platform/chess-engine";
-import { Button, Card, ChessBoard, Modal } from "@chess-platform/ui";
+import { Button, Card, ChessBoard, ChessPieceSvg, Modal } from "@chess-platform/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -139,12 +139,24 @@ const boardThemes: Record<CustomizationSettings["boardTheme"], { dark: string; l
   wood: { dark: "#9a6735", label: "Дерево", light: "#f0d9b5", premium: false }
 };
 
-const pieceStyles: Record<CustomizationSettings["pieceStyle"], { label: string; premium: boolean; preview: string }> = {
-  classic: { label: "Классик", premium: false, preview: "♔♕♖♗♘♙" },
-  neon: { label: "Неон", premium: false, preview: "♔♕♖♗♘♙" },
-  pixel: { label: "Пиксель", premium: false, preview: "♔♕♖♗♘♙" },
-  premium: { label: "Premium", premium: true, preview: "🔒" }
+const pieceStyles: Record<CustomizationSettings["pieceStyle"], { label: string; premium: boolean }> = {
+  classic: { label: "Классик", premium: false },
+  neon: { label: "Неон", premium: false },
+  pixel: { label: "Пиксель", premium: false },
+  premium: { label: "Premium", premium: true }
 };
+
+const pieceStylePreviewPiece: Piece = { color: "white", type: "king" };
+const customizationPreviewPieces: Array<Piece | null> = [
+  { color: "black", type: "rook" },
+  null,
+  { color: "black", type: "king" },
+  null,
+  { color: "white", type: "pawn" },
+  null,
+  null,
+  { color: "white", type: "king" }
+];
 
 const pieceNotation: Record<PieceType, string> = {
   bishop: "B",
@@ -626,6 +638,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
                   legalMoves={viewedPly === null ? legalMoves : []}
                   onSquareClick={handleSquareClick}
                   orientation={orientation}
+                  pieceStyle={customization.pieceStyle}
                   selectedSquare={viewedPly === null ? selectedSquare : null}
                   state={displayedState}
                 />
@@ -1333,15 +1346,25 @@ function CustomizationModal({
           <div className="grid grid-cols-4 gap-2">
             {Object.entries(pieceStyles).map(([value, item]) => {
               const locked = item.premium && !isPremium;
+              const styleName = value as CustomizationSettings["pieceStyle"];
+
               return (
                 <button
-                  className={`aspect-square rounded-[8px] border-2 flex items-center justify-center ${draft.pieceStyle === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
+                  className={`aspect-square rounded-[8px] border-2 flex flex-col items-center justify-center gap-2 bg-[var(--color-bg)] p-2 ${draft.pieceStyle === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
                   disabled={locked}
                   key={value}
-                  onClick={() => setDraft((current) => ({ ...current, pieceStyle: value as CustomizationSettings["pieceStyle"] }))}
+                  onClick={() => setDraft((current) => ({ ...current, pieceStyle: styleName }))}
+                  title={locked ? "🔒 Premium" : item.label}
                   type="button"
                 >
-                  <span className="text-[20px] leading-none">{locked ? "🔒" : item.preview.split("")[0]}</span>
+                  {locked ? (
+                    <span className="text-[24px] leading-none">🔒</span>
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center">
+                      <ChessPieceSvg piece={pieceStylePreviewPiece} styleName={styleName} />
+                    </span>
+                  )}
+                  <span className="text-[11px] text-[var(--color-text-secondary)]">{item.label}</span>
                 </button>
               );
             })}
@@ -1363,13 +1386,13 @@ function CustomizationModal({
 
         <div className="flex items-center gap-3 rounded-[8px] border border-[var(--color-border)] p-3" style={getBoardThemeStyle(draft)}>
           <div className="grid w-14 grid-cols-4 gap-[2px] font-mono text-sm">
-            {["♖", "", "♔", "", "♙", "", "", ""].map((piece, index) => (
+            {customizationPreviewPieces.map((piece, index) => (
               <div
-                className="aspect-square flex items-center justify-center text-[var(--color-text-primary)]"
+                className="aspect-square flex items-center justify-center overflow-hidden"
                 key={index}
                 style={{ background: index % 2 === 0 ? "var(--color-square-light)" : "var(--color-square-dark)" }}
               >
-                {piece}
+                {piece ? <ChessPieceSvg piece={piece} styleName={draft.pieceStyle} /> : null}
               </div>
             ))}
           </div>
