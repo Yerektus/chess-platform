@@ -10,13 +10,18 @@ import {
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
+import { calculateEloPair } from "../users/elo";
+import { User, type UserDocument } from "../users/schemas/user.schema";
 import { Room, type RoomDocument, type RoomResult } from "./schemas/room.schema";
 
 @Injectable()
 export class RoomsService {
   private readonly initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-  constructor(@InjectModel(Room.name) private readonly roomModel: Model<RoomDocument>) {}
+  constructor(
+    @InjectModel(Room.name) private readonly roomModel: Model<RoomDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>
+  ) {}
 
   async create(userId: string): Promise<RoomDocument> {
     if (!Types.ObjectId.isValid(userId)) {
@@ -128,7 +133,13 @@ export class RoomsService {
       room.result = toRoomResult(status, playerColor);
     }
 
-    return room.save();
+    const savedRoom = await room.save();
+
+    if (savedRoom.status === "finished") {
+      await this.updateRoomRatings(savedRoom);
+    }
+
+    return savedRoom;
   }
 
   async resign(code: string, userId: string): Promise<RoomDocument> {
@@ -146,7 +157,11 @@ export class RoomsService {
     room.status = "finished";
     room.result = playerColor === "white" ? "black" : "white";
 
-    return room.save();
+    const savedRoom = await room.save();
+
+    await this.updateRoomRatings(savedRoom);
+
+    return savedRoom;
   }
 
   private async getRoomOrThrow(code: string): Promise<RoomDocument> {
@@ -157,6 +172,28 @@ export class RoomsService {
     }
 
     return room;
+  }
+
+  private async updateRoomRatings(room: RoomDocument): Promise<void> {
+    if (!room.blackId || !room.result) {
+      return;
+    }
+
+    const [white, black] = await Promise.all([
+      this.userModel.findById(room.whiteId).select({ elo: 1 }).exec(),
+      this.userModel.findById(room.blackId).select({ elo: 1 }).exec()
+    ]);
+
+    if (!white || !black) {
+      return;
+    }
+
+    const nextRatings = calculateEloPair(white.elo, black.elo, room.result);
+
+    await Promise.all([
+      this.userModel.findByIdAndUpdate(white._id, { elo: nextRatings.whiteElo }, { runValidators: true }).exec(),
+      this.userModel.findByIdAndUpdate(black._id, { elo: nextRatings.blackElo }, { runValidators: true }).exec()
+    ]);
   }
 }
 

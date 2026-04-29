@@ -166,7 +166,7 @@ const pieceName: Record<PieceType, string> = {
 
 export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const router = useRouter();
-  const { accessToken, user } = useAuth();
+  const { accessToken, updateUser, user } = useAuth();
   const initialMode = normalizeMode(mode);
   const [activeMode, setActiveMode] = useState<GameMode>(initialMode);
   const [gameStarted, setGameStarted] = useState(false);
@@ -201,11 +201,13 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisPly, setAnalysisPly] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [gameSaveStatus, setGameSaveStatus] = useState<string | null>(null);
   const [playerClocks, setPlayerClocks] = useState<Record<Color, number>>({ black: 0, white: 0 });
   const clockBaseRef = useRef<Record<Color, number>>({ black: 0, white: 0 });
   const turnStartedAtRef = useRef(Date.now());
   const gameVersionRef = useRef(0);
   const botRequestRef = useRef(0);
+  const savedGameKeyRef = useRef<string | null>(null);
 
   const legalMoves = useMemo(
     () => (selectedSquare && viewedPly === null ? getLegalMoves(state, selectedSquare) : []),
@@ -236,6 +238,8 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     setViewedPly(null);
     setResult(null);
     setIsAiThinking(false);
+    setGameSaveStatus(null);
+    savedGameKeyRef.current = null;
     setPlayerClocks({ black: 0, white: 0 });
   }, []);
 
@@ -410,6 +414,64 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     botRequestRef.current = requestId;
     void requestAiMove(state, gameVersionRef.current, requestId, botDepthByDifficulty[botDifficulty]);
   }, [aiColor, botDifficulty, isAiThinking, isBotGame, requestAiMove, result, state, viewedPly]);
+
+  useEffect(() => {
+    if (!accessToken || activeMode !== "bot" || !result || result.winner === null || moveHistory.length === 0) {
+      return;
+    }
+
+    const pgn = createPgn(moveRows);
+    const winner = result.winner;
+    const gameKey = `${activeMode}:${playerColor}:${winner}:${moveHistory.length}:${pgn}`;
+
+    if (!pgn || savedGameKeyRef.current === gameKey) {
+      return;
+    }
+
+    savedGameKeyRef.current = gameKey;
+    setGameSaveStatus("Сохраняем партию и обновляем ELO...");
+
+    async function saveFinishedGame() {
+      try {
+        const response = await fetch("/api/games", {
+          body: JSON.stringify({
+            opponent: "ai",
+            pgn,
+            ratedPlayerColor: playerColor,
+            result: winner
+          }),
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        });
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.message ?? "Не удалось сохранить партию");
+        }
+
+        const userResponse = await fetch("/api/users/me", {
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+
+        if (userResponse.ok) {
+          updateUser((await userResponse.json()) as AuthUser);
+        }
+
+        setGameSaveStatus("Партия сохранена, ELO обновлён.");
+      } catch (error) {
+        savedGameKeyRef.current = null;
+        setGameSaveStatus(error instanceof Error ? error.message : "Не удалось сохранить партию");
+      }
+    }
+
+    void saveFinishedGame();
+  }, [accessToken, activeMode, moveHistory.length, moveRows, playerColor, result, updateUser]);
 
   useEffect(() => {
     setCustomization(readCustomization());
@@ -651,6 +713,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         }}
         onNewGame={resetGame}
         open={Boolean(result)}
+        ratingStatus={gameSaveStatus}
         result={result}
         whiteAccuracy={analysisResult?.accuracy.white}
         blackAccuracy={analysisResult?.accuracy.black}
@@ -945,6 +1008,7 @@ function ResultModal({
   onMenu,
   onNewGame,
   open,
+  ratingStatus,
   result,
   whiteAccuracy
 }: {
@@ -959,6 +1023,7 @@ function ResultModal({
   onMenu: () => void;
   onNewGame: () => void;
   open: boolean;
+  ratingStatus: string | null;
   result: ResultInfo | null;
   whiteAccuracy?: number;
 }) {
@@ -985,6 +1050,11 @@ function ResultModal({
           <ResultStat label="Точность белых" value={formatAccuracy(whiteAccuracy)} />
           <ResultStat label="Точность чёрных" value={isPremium ? formatAccuracy(blackAccuracy) : "🔒 Premium"} />
         </div>
+        {ratingStatus ? (
+          <p className="rounded-[6px] border border-[var(--color-border)] px-3 py-2 text-[13px] text-[var(--color-text-secondary)]">
+            {ratingStatus}
+          </p>
+        ) : null}
       </div>
       <div className="grid gap-3 border-t border-[var(--color-border)] px-6 py-5">
         <div className="grid grid-cols-2 gap-3">

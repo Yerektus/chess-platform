@@ -12,6 +12,7 @@ import {
 } from "@chess-platform/chess-engine";
 import { Button, Card, ChessBoard, Modal } from "@chess-platform/ui";
 import { useAuth } from "@/components/auth/auth-provider";
+import { type AuthUser } from "@/lib/auth-types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 
@@ -41,7 +42,7 @@ type PendingMove = LastMove & {
 };
 
 export function OnlineGame({ code }: OnlineGameProps) {
-  const { accessToken, isLoading, user } = useAuth();
+  const { accessToken, isLoading, updateUser, user } = useAuth();
   const [room, setRoom] = useState<RoomState | null>(null);
   const [optimisticState, setOptimisticState] = useState<BoardState | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -51,6 +52,7 @@ export function OnlineGame({ code }: OnlineGameProps) {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const pendingMoveRef = useRef<PendingMove | null>(null);
+  const refreshedRatingRoomRef = useRef<string | null>(null);
 
   const playerColor = useMemo<Color | null>(() => {
     if (!room || !user) {
@@ -193,6 +195,29 @@ export function OnlineGame({ code }: OnlineGameProps) {
       socketRef.current = null;
     };
   }, [accessToken, code, isLoading, updateRoom, user]);
+
+  useEffect(() => {
+    if (!accessToken || room?.status !== "finished" || !playerColor || refreshedRatingRoomRef.current === room.id) {
+      return;
+    }
+
+    refreshedRatingRoomRef.current = room.id;
+
+    async function refreshUserAfterRatingUpdate() {
+      const response = await fetch("/api/users/me", {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      if (response.ok) {
+        updateUser((await response.json()) as AuthUser);
+      }
+    }
+
+    void refreshUserAfterRatingUpdate();
+  }, [accessToken, playerColor, room?.id, room?.status, updateUser]);
 
   const handleSquareClick = (square: Square) => {
     if (!boardState || !canMove) {

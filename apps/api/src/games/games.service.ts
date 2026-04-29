@@ -1,9 +1,12 @@
+import { type Color } from "@chess-platform/chess-engine";
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
+import { calculateEloAgainstOpponent, calculateEloPair, getScoreForColor } from "../users/elo";
+import { User, type UserDocument } from "../users/schemas/user.schema";
 import { type AnalyzeGameResponseDto } from "./dto/analyze-game-response.dto";
 import { CreateGameDto } from "./dto/create-game.dto";
-import { Game, type GameDocument } from "./schemas/game.schema";
+import { Game, type GameDocument, type GameResult } from "./schemas/game.schema";
 import { StockfishAnalysisService } from "./stockfish-analysis.service";
 
 @Injectable()
@@ -12,17 +15,23 @@ export class GamesService {
 
   constructor(
     @InjectModel(Game.name) private readonly gameModel: Model<GameDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly stockfishAnalysisService: StockfishAnalysisService
   ) {}
 
   async create(dto: CreateGameDto & { whiteId: string }): Promise<GameDocument> {
-    return this.gameModel.create({
-      ...dto,
+    const game = await this.gameModel.create({
       whiteId: new Types.ObjectId(dto.whiteId),
       blackId: dto.blackId ? new Types.ObjectId(dto.blackId) : null,
+      opponent: dto.opponent,
+      pgn: dto.pgn,
       analysis: dto.analysis ?? [],
       result: dto.result ?? null
     });
+
+    await this.updateRatings(dto);
+
+    return game;
   }
 
   async findById(id: string): Promise<GameDocument | null> {
@@ -97,6 +106,53 @@ export class GamesService {
     } finally {
       this.activeAnalysisJobs.delete(id);
     }
+  }
+
+  private async updateRatings(dto: CreateGameDto & { whiteId: string }): Promise<void> {
+    if (!dto.result) {
+      return;
+    }
+
+    if (dto.blackId) {
+      await this.updateHumanRatings(dto.whiteId, dto.blackId, dto.result);
+      return;
+    }
+
+    if (dto.opponent === "ai" && dto.ratedPlayerColor) {
+      await this.updateAiGameRating(dto.whiteId, dto.ratedPlayerColor, dto.result);
+    }
+  }
+
+  private async updateHumanRatings(whiteId: string, blackId: string, result: GameResult): Promise<void> {
+    const [white, black] = await Promise.all([
+      this.userModel.findById(whiteId).select({ elo: 1 }).exec(),
+      this.userModel.findById(blackId).select({ elo: 1 }).exec()
+    ]);
+
+    if (!white || !black) {
+      return;
+    }
+
+    const nextRatings = calculateEloPair(white.elo, black.elo, result);
+
+    await Promise.all([
+      this.userModel.findByIdAndUpdate(white._id, { elo: nextRatings.whiteElo }, { runValidators: true }).exec(),
+      this.userModel.findByIdAndUpdate(black._id, { elo: nextRatings.blackElo }, { runValidators: true }).exec()
+    ]);
+  }
+
+  private async updateAiGameRating(userId: string, playerColor: Color, result: GameResult): Promise<void> {
+    const user = await this.userModel.findById(userId).select({ elo: 1 }).exec();
+
+    if (!user) {
+      return;
+    }
+
+    const aiElo = 1200;
+    const score = getScoreForColor(result, playerColor);
+    const nextElo = calculateEloAgainstOpponent(user.elo, aiElo, score);
+
+    await this.userModel.findByIdAndUpdate(user._id, { elo: nextElo }, { runValidators: true }).exec();
   }
 }
 
