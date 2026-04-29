@@ -1,15 +1,23 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { normalizeInternalPath } from "@/lib/navigation";
 import { Button, Card, Input } from "@chess-platform/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 export function LoginForm({ nextPath }: { nextPath: string }) {
-  const { login, isLoading } = useAuth();
+  const { accessToken, login, isLoading, user } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const safeNextPath = useMemo(() => normalizeInternalPath(nextPath), [nextPath]);
+
+  useEffect(() => {
+    if (!isLoading && accessToken && user) {
+      router.replace(safeNextPath);
+    }
+  }, [accessToken, isLoading, router, safeNextPath, user]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -22,11 +30,21 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? "")
       });
-      router.push(nextPath);
+      router.replace(safeNextPath);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to sign in");
     }
   };
+
+  if (isLoading || (accessToken && user)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 py-12 text-[var(--color-text-primary)]">
+        <Card className="w-full max-w-[420px]">
+          <p className="text-[13px] text-[var(--color-text-secondary)]">Loading...</p>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 py-12 text-[var(--color-text-primary)]">
