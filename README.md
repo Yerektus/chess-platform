@@ -69,3 +69,18 @@
    ```bash
    pnpm run dev
    ```
+
+## Railway API deploy notes
+
+Для API сервиса используйте production-команды:
+
+```bash
+pnpm --filter @chess-platform/api build
+pnpm --filter @chess-platform/api start
+```
+
+Если в логах Railway появляется `MongoServerError: Authentication failed.`, проверьте `MONGODB_URI`. Для Railway MongoDB public TCP proxy строка обычно должна выглядеть так:
+
+```env
+MONGODB_URI="mongodb://mongo:<password>@<host>:<port>/chess-platform?authSource=admin"
+```

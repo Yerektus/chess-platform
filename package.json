@@ -18,8 +18,8 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
+    "postcss": "8.5.12",
+    "tailwindcss": "3.4.19",
     "turbo": "^2.5.0",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

@@ -6,6 +6,8 @@
     "dev": "node ../../packages/config/api-dev.cjs",
     "prebuild": "pnpm --filter @chess-platform/types build && pnpm --filter @chess-platform/chess-engine build",
     "build": "nest build",
+    "start": "node dist/main.js",
+    "start:prod": "node dist/main.js",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests"
   },

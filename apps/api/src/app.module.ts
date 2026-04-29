@@ -5,6 +5,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { PassportModule } from "@nestjs/passport";
 import { AuthModule } from "./auth/auth.module";
 import { GamesModule } from "./games/games.module";
+import { HealthController } from "./health.controller";
 import { LeaderboardModule } from "./leaderboard/leaderboard.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { RoomsModule } from "./rooms/rooms.module";
@@ -33,6 +34,7 @@ import { UsersModule } from "./users/users.module";
     RoomsModule,
     LeaderboardModule,
     PaymentsModule
-  ]
+  ],
+  controllers: [HealthController]
 })
 export class AppModule {}
