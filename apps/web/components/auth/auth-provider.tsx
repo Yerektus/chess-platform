@@ -20,6 +20,7 @@ type AuthContextValue = {
   login: (credentials: Credentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (nextUser: AuthUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -98,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(null);
         setUser(null);
         router.push("/login");
-      }
+      },
+      updateUser: setUser
     }),
     [accessToken, isLoading, router, user]
   );

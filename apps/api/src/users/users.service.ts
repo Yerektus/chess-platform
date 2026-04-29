@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
+import { Model, Types, type UpdateQuery } from "mongoose";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserPreferencesDto } from "./dto/update-user-preferences.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -35,10 +35,36 @@ export class UsersService {
       return null;
     }
 
-    const update = {
-      ...dto,
-      email: dto.email?.toLowerCase()
-    };
+    const set: Partial<Pick<User, "city" | "email" | "username">> = {};
+    const unset: Record<string, ""> = {};
+
+    if (dto.username !== undefined) {
+      set.username = dto.username;
+    }
+
+    if (dto.email !== undefined) {
+      set.email = dto.email.toLowerCase();
+    }
+
+    if (dto.city !== undefined) {
+      const city = dto.city.trim();
+
+      if (city) {
+        set.city = city;
+      } else {
+        unset.city = "";
+      }
+    }
+
+    const update: UpdateQuery<UserDocument> = {};
+
+    if (Object.keys(set).length > 0) {
+      update.$set = set;
+    }
+
+    if (Object.keys(unset).length > 0) {
+      update.$unset = unset;
+    }
 
     return this.userModel.findByIdAndUpdate(id, update, { new: true, runValidators: true }).exec();
   }

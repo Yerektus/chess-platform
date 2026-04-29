@@ -1,37 +1,49 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { type GameHistoryResponse } from "@/lib/auth-types";
+import { type AuthUser, type GameHistoryResponse } from "@/lib/auth-types";
 import { Button, Card, Modal } from "@chess-platform/ui";
-import { type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 
 export function ProfileClient({ page }: { page: number }) {
-  const { accessToken, user, isLoading, logout } = useAuth();
+  const { accessToken, user, isLoading, logout, updateUser } = useAuth();
   const [history, setHistory] = useState<GameHistoryResponse | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [city, setCity] = useState(user?.city ?? "");
   const [isSavingCity, setIsSavingCity] = useState(false);
   const [citySaveError, setCitySaveError] = useState<string | null>(null);
+  const [citySaveStatus, setCitySaveStatus] = useState<string | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "subscriptions">("profile");
+  const savedCity = user?.city?.trim() ?? "";
+  const normalizedCity = useMemo(() => city.trim(), [city]);
+  const canSaveCity = Boolean(accessToken) && !isSavingCity && normalizedCity !== savedCity;
 
   useEffect(() => {
     setCity(user?.city ?? "");
   }, [user?.city]);
 
-  const handleSaveCity = async () => {
+  const handleSaveCity = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
     if (!accessToken) {
+      setCitySaveError("Войдите в аккаунт, чтобы сохранить город.");
+      return;
+    }
+
+    if (normalizedCity === savedCity) {
       return;
     }
 
     setIsSavingCity(true);
     setCitySaveError(null);
+    setCitySaveStatus(null);
 
     try {
       const response = await fetch("/api/users/city", {
-        body: JSON.stringify({ city }),
+        body: JSON.stringify({ city: normalizedCity }),
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json"
@@ -39,11 +51,19 @@ export function ProfileClient({ page }: { page: number }) {
         method: "PATCH"
       });
 
-      const payload = await response.json().catch(() => null);
+      const payload = (await response.json().catch(() => null)) as AuthUser | { message?: string } | null;
 
       if (!response.ok) {
         throw new Error((payload as { message?: string })?.message ?? "Unable to save city");
       }
+
+      if (!payload || !("id" in payload)) {
+        throw new Error("Unable to save city");
+      }
+
+      updateUser(payload);
+      setCity(payload.city ?? "");
+      setCitySaveStatus(normalizedCity ? "Город сохранён." : "Город удалён.");
     } catch (caughtError) {
       setCitySaveError(caughtError instanceof Error ? caughtError.message : "Unable to save city");
     } finally {
@@ -182,20 +202,33 @@ export function ProfileClient({ page }: { page: number }) {
                 }
               />
               <Card>
-                <p className="text-[13px] text-[var(--color-text-secondary)]">City</p>
-                <div className="mt-2 flex items-center gap-2">
+                <form className="flex h-full flex-col gap-3" onSubmit={handleSaveCity}>
+                  <div>
+                    <p className="text-[13px] text-[var(--color-text-secondary)]">City</p>
+                    <p className="mt-1 text-[18px] font-medium">{savedCity || "Not specified"}</p>
+                  </div>
                   <input
-                    className="min-h-[32px] w-full rounded-[6px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[15px] text-[var(--color-text-primary)]"
-                    onChange={(e) => setCity(e.target.value)}
+                    aria-label="City"
+                    autoComplete="address-level2"
+                    className="min-h-11 w-full rounded-[6px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[15px] text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent)]"
+                    maxLength={80}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      setCitySaveError(null);
+                      setCitySaveStatus(null);
+                    }}
+                    placeholder="Например, Алматы"
                     value={city}
                   />
-                  <Button disabled={isSavingCity} onClick={handleSaveCity} variant="ghost">
-                    {isSavingCity ? "..." : "Save"}
-                  </Button>
-                </div>
-                {citySaveError ? (
-                  <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{citySaveError}</p>
-                ) : null}
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-h-5 text-[12px] text-[var(--color-text-secondary)]">
+                      {citySaveError ?? citySaveStatus ?? "Город будет виден в рейтинге."}
+                    </p>
+                    <Button className="min-h-10 shrink-0" disabled={!canSaveCity} type="submit">
+                      {isSavingCity ? "Сохраняем..." : "Сохранить"}
+                    </Button>
+                  </div>
+                </form>
               </Card>
             </section>
 
