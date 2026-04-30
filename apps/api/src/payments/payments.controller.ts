@@ -1,7 +1,7 @@
 import { Controller, Get, Headers, HttpCode, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { type RawBodyRequest } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { PaymentsService } from "./payments.service";
+import { PaymentsService, type SubscriptionSummary } from "./payments.service";
 
 @Controller("payments")
 export class PaymentsController {
@@ -15,7 +15,9 @@ export class PaymentsController {
 
   @Get("subscription")
   @UseGuards(JwtAuthGuard)
-  async getSubscription(@Req() request: AuthenticatedRequest): Promise<{ subscription: any; nextBillingDate: string | null }> {
+  async getSubscription(
+    @Req() request: AuthenticatedRequest
+  ): Promise<{ subscription: SubscriptionSummary | null; nextBillingDate: string | null }> {
     return this.paymentsService.getSubscription(getAuthenticatedUserId(request));
   }
 

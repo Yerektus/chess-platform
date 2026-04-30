@@ -2,8 +2,8 @@
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { type AuthUser, type GameHistoryResponse } from "@/lib/auth-types";
-import { Button, Card, Modal } from "@chess-platform/ui";
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { Button, Card } from "@chess-platform/ui";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 export function ProfileClient({ page }: { page: number }) {
   const { accessToken, user, isLoading, logout, updateUser } = useAuth();
@@ -13,9 +13,6 @@ export function ProfileClient({ page }: { page: number }) {
   const [isSavingCity, setIsSavingCity] = useState(false);
   const [citySaveError, setCitySaveError] = useState<string | null>(null);
   const [citySaveStatus, setCitySaveStatus] = useState<string | null>(null);
-  const [isSubscribing, setIsSubscribing] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "subscriptions">("profile");
   const savedCity = user?.city?.trim() ?? "";
   const normalizedCity = useMemo(() => city.trim(), [city]);
@@ -68,35 +65,6 @@ export function ProfileClient({ page }: { page: number }) {
       setCitySaveError(caughtError instanceof Error ? caughtError.message : "Unable to save city");
     } finally {
       setIsSavingCity(false);
-    }
-  };
-
-  const handleSubscribe = async () => {
-    if (!accessToken) {
-      setSubscriptionStatus("Войдите в аккаунт, чтобы оформить Premium.");
-      return;
-    }
-
-    setIsSubscribing(true);
-    setSubscriptionStatus("Создаём Stripe Checkout...");
-
-    try {
-      const response = await fetch("/api/payments/checkout", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        },
-        method: "POST"
-      });
-      const payload = (await response.json().catch(() => null)) as { url?: string; message?: string } | null;
-
-      if (!response.ok || !payload?.url) {
-        throw new Error(payload?.message ?? "Не удалось создать checkout-сессию");
-      }
-
-      window.location.href = payload.url;
-    } catch (error) {
-      setSubscriptionStatus(error instanceof Error ? error.message : "Не удалось открыть Stripe Checkout");
-      setIsSubscribing(false);
     }
   };
 
@@ -187,20 +155,9 @@ export function ProfileClient({ page }: { page: number }) {
 
         {activeTab === "profile" ? (
           <>
-            <section className="grid gap-4 md:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-3">
               <ProfileStat label="Username" value={user?.username ?? "Unavailable"} />
               <ProfileStat label="ELO" value={String(user?.elo ?? "Unavailable")} />
-              <ProfileStat
-                label="Plan"
-                value={user?.plan === "pro" ? "Premium 👑" : "Free"}
-                action={
-                  user?.plan !== "pro" ? (
-                    <Button className="mt-2 w-full" onClick={() => setShowSubscriptionModal(true)}>
-                      Upgrade
-                    </Button>
-                  ) : null
-                }
-              />
               <Card>
                 <form className="flex h-full flex-col gap-3" onSubmit={handleSaveCity}>
                   <div>
@@ -283,33 +240,6 @@ export function ProfileClient({ page }: { page: number }) {
           <SubscriptionManager accessToken={accessToken} userPlan={user?.plan} />
         )}
       </div>
-
-      {showSubscriptionModal && (
-        <Modal open={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Upgrade to Premium">
-          <div>
-            <p className="text-[14px] text-[var(--color-text-secondary)]">
-              Get unlimited analysis, advanced features, and no ads.
-            </p>
-
-            {subscriptionStatus && (
-              <p className="mt-4 text-[14px] text-[var(--color-text-secondary)]">{subscriptionStatus}</p>
-            )}
-
-            <div className="mt-6 flex gap-3">
-              <Button variant="ghost" onClick={() => setShowSubscriptionModal(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubscribe}
-                disabled={isSubscribing}
-                className="flex-1"
-              >
-                {isSubscribing ? "Processing..." : "Continue to Payment"}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </main>
   );
 }
@@ -469,12 +399,11 @@ function SubscriptionManager({
   );
 }
 
-function ProfileStat({ label, value, action }: { label: string; value: string; action?: ReactNode }) {
+function ProfileStat({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <p className="text-[13px] text-[var(--color-text-secondary)]">{label}</p>
       <p className="mt-2 text-[24px] font-medium leading-[1.2]">{value}</p>
-      {action}
     </Card>
   );
 }

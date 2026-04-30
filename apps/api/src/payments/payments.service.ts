@@ -203,7 +203,7 @@ type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["list
   current_period_end?: number | null;
 };
 
-type SubscriptionSummary = {
+export type SubscriptionSummary = {
   id: string;
   status: string;
   priceId: string | null;
