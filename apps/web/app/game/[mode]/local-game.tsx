@@ -871,7 +871,7 @@ function ModeSetup({
           {isSearching ? (
             <div className="flex items-center gap-3 rounded-[6px] border border-[var(--color-border)] p-3 text-[14px] text-[var(--color-text-secondary)]">
               <span className="h-3 w-3 animate-ping rounded-full bg-[var(--color-accent)]" />
-              Поиск соперника через WebSocket matchmaking...
+              Поиск соперника
             </div>
           ) : null}
         </section>
