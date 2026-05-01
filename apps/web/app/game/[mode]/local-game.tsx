@@ -12,11 +12,18 @@ import {
   type PieceType,
   type Square
 } from "@chess-platform/chess-engine";
-import { Button, Card, ChessBoard, ChessPieceSvg, Modal } from "@chess-platform/ui";
+import { Button, Card, ChessBoard, Modal } from "@chess-platform/ui";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { type AuthUser } from "@/lib/auth-types";
+import {
+  defaultCustomization,
+  getBoardThemeStyle,
+  readCustomization,
+  toCustomizationSettings,
+  type CustomizationSettings
+} from "@/lib/customization";
 import { useStockfish } from "@/hooks/use-stockfish";
 
 const initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -80,14 +87,6 @@ type AnalysisResult = {
   };
 };
 
-type CustomizationSettings = {
-  boardTheme: "green" | "blue" | "wood" | "marble";
-  pieceStyle: "classic" | "neon" | "pixel" | "premium";
-  highlightColor: "#f0c040" | "#3b82f6" | "#81b64c" | "#cc3030";
-  animations: boolean;
-  sounds: boolean;
-};
-
 const aiColorByPlayerColor: Record<Color, Color> = {
   black: "white",
   white: "black"
@@ -122,40 +121,6 @@ const localTimeControls: Array<{ label: string; value: LocalTimeControl }> = [
   { label: "5+0", value: "5+0" },
   { label: "10+0", value: "10+0" },
   { label: "15+10", value: "15+10" }
-];
-
-const defaultCustomization: CustomizationSettings = {
-  animations: true,
-  boardTheme: "green",
-  highlightColor: "#81b64c",
-  pieceStyle: "classic",
-  sounds: true
-};
-
-const boardThemes: Record<CustomizationSettings["boardTheme"], { dark: string; label: string; light: string; premium: boolean }> = {
-  blue: { dark: "#4f6f9f", label: "Синяя", light: "#dbeafe", premium: false },
-  green: { dark: "#769656", label: "Зелёная", light: "#eeeed2", premium: false },
-  marble: { dark: "#64748b", label: "Мрамор", light: "#f8fafc", premium: true },
-  wood: { dark: "#9a6735", label: "Дерево", light: "#f0d9b5", premium: false }
-};
-
-const pieceStyles: Record<CustomizationSettings["pieceStyle"], { label: string; premium: boolean }> = {
-  classic: { label: "Классик", premium: false },
-  neon: { label: "Неон", premium: false },
-  pixel: { label: "Пиксель", premium: false },
-  premium: { label: "Premium", premium: true }
-};
-
-const pieceStylePreviewPiece: Piece = { color: "white", type: "king" };
-const customizationPreviewPieces: Array<Piece | null> = [
-  { color: "black", type: "rook" },
-  null,
-  { color: "black", type: "king" },
-  null,
-  { color: "white", type: "pawn" },
-  null,
-  null,
-  { color: "white", type: "king" }
 ];
 
 const pieceNotation: Record<PieceType, string> = {
@@ -204,7 +169,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const [result, setResult] = useState<ResultInfo | null>(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const [showCustomization, setShowCustomization] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [customization, setCustomization] = useState<CustomizationSettings>(defaultCustomization);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -491,20 +455,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     }
   }, [user?.preferences]);
 
-  useEffect(() => {
-    const openCustomization = () => setShowCustomization(true);
-
-    window.addEventListener("open-chess-customization", openCustomization);
-
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "1") {
-      setShowCustomization(true);
-    }
-
-    return () => {
-      window.removeEventListener("open-chess-customization", openCustomization);
-    };
-  }, []);
-
   const handleSquareClick = (square: Square) => {
     if (!canUseBoard) {
       return;
@@ -598,25 +548,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     } catch (error) {
       setSubscriptionStatus(error instanceof Error ? error.message : "Не удалось открыть Stripe Checkout");
     }
-  };
-
-  const handleSaveCustomization = async (nextSettings: CustomizationSettings) => {
-    persistCustomization(nextSettings);
-    setCustomization(nextSettings);
-    setShowCustomization(false);
-
-    if (!accessToken) {
-      return;
-    }
-
-    await fetch("/api/users/preferences", {
-      body: JSON.stringify(nextSettings),
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      method: "PATCH"
-    }).catch(() => undefined);
   };
 
   return (
@@ -743,14 +674,6 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         onClose={() => setIsAnalysisOpen(false)}
         onNavigate={setAnalysisPly}
         open={isAnalysisOpen}
-      />
-
-      <CustomizationModal
-        isPremium={isPremium}
-        onClose={() => setShowCustomization(false)}
-        onSave={(nextSettings) => void handleSaveCustomization(nextSettings)}
-        open={showCustomization}
-        settings={customization}
       />
 
       <SubscriptionModal
@@ -1251,222 +1174,6 @@ function PremiumGate({ feature }: { feature: string }) {
   return (
     <div className="rounded-[6px] border border-[var(--color-border)] p-3 text-[13px] text-[var(--color-text-secondary)]">
       🔒 {feature}
-    </div>
-  );
-}
-
-function CustomizationModal({
-  isPremium,
-  onClose,
-  onSave,
-  open,
-  settings
-}: {
-  isPremium: boolean;
-  onClose: () => void;
-  onSave: (settings: CustomizationSettings) => void;
-  open: boolean;
-  settings: CustomizationSettings;
-}) {
-  const [draft, setDraft] = useState(settings);
-  const [activeTab, setActiveTab] = useState<"board" | "pieces" | "other">("board");
-
-  useEffect(() => {
-    setDraft(settings);
-  }, [settings, open]);
-
-  return (
-    <Modal className="max-w-[420px]" onClose={onClose} open={open} showCloseButton={false} title="🎨">
-      <div className="flex flex-col gap-4">
-        <div className="flex gap-1 rounded-[8px] border border-[var(--color-border)] p-1">
-          {(["board", "pieces", "other"] as const).map((tab) => (
-            <button
-              className={`flex-1 rounded-[6px] px-3 py-2 text-[13px] transition-colors ${activeTab === tab ? "bg-[var(--color-accent)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              type="button"
-            >
-              {tab === "board" ? "Доска" : tab === "pieces" ? "Фигуры" : "Прочее"}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "board" && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-4 gap-2">
-              {Object.entries(boardThemes).map(([value, item]) => {
-                const locked = item.premium && !isPremium;
-                return (
-                  <button
-                    className={`aspect-square rounded-[8px] border-2 ${draft.boardTheme === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
-                    disabled={locked}
-                    key={value}
-                    onClick={() => setDraft((current) => ({ ...current, boardTheme: value as CustomizationSettings["boardTheme"] }))}
-                    style={{ background: item.light }}
-                    title={locked ? "🔒 Premium" : item.label}
-                    type="button"
-                  >
-                    <div className="flex h-full w-full items-center justify-center">
-                      <div className="h-4 w-4 rounded" style={{ background: item.dark }} />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--color-text-secondary)]">Цвет подсветки</span>
-              <div className="flex gap-2">
-                {isPremium && (
-                  <button
-                    className={`h-7 w-7 rounded-full border-2 ${draft.highlightColor === "#cc3030" ? "border-[var(--color-text-primary)]" : "border-transparent"}`}
-                    onClick={() => setDraft((current) => ({ ...current, highlightColor: "#cc3030" as CustomizationSettings["highlightColor"] }))}
-                    style={{ background: "#cc3030" }}
-                    title="🔴 Красный (Premium)"
-                    type="button"
-                  />
-                )}
-                {["#f0c040", "#3b82f6", "#81b64c"].map((color) => (
-                  <button
-                    className={`h-7 w-7 rounded-full border-2 ${draft.highlightColor === color ? "border-[var(--color-text-primary)]" : "border-transparent"}`}
-                    key={color}
-                    onClick={() => setDraft((current) => ({ ...current, highlightColor: color as CustomizationSettings["highlightColor"] }))}
-                    style={{ background: color }}
-                    type="button"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "pieces" && (
-          <div className="grid grid-cols-4 gap-2">
-            {Object.entries(pieceStyles).map(([value, item]) => {
-              const locked = item.premium && !isPremium;
-              const styleName = value as CustomizationSettings["pieceStyle"];
-
-              return (
-                <button
-                  className={`aspect-square rounded-[8px] border-2 flex flex-col items-center justify-center gap-2 bg-[var(--color-bg)] p-2 ${draft.pieceStyle === value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-40" : ""}`}
-                  disabled={locked}
-                  key={value}
-                  onClick={() => setDraft((current) => ({ ...current, pieceStyle: styleName }))}
-                  title={locked ? "🔒 Premium" : item.label}
-                  type="button"
-                >
-                  {locked ? (
-                    <span className="text-[24px] leading-none">🔒</span>
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center">
-                      <ChessPieceSvg piece={pieceStylePreviewPiece} styleName={styleName} />
-                    </span>
-                  )}
-                  <span className="text-[11px] text-[var(--color-text-secondary)]">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === "other" && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--color-text-secondary)]">Анимация</span>
-              <ToggleSwitch checked={draft.animations} onChange={(value) => setDraft((current) => ({ ...current, animations: value }))} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--color-text-secondary)]">Звуки</span>
-              <ToggleSwitch checked={draft.sounds} onChange={(value) => setDraft((current) => ({ ...current, sounds: value }))} />
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 rounded-[8px] border border-[var(--color-border)] p-3" style={getBoardThemeStyle(draft)}>
-          <div className="grid w-14 grid-cols-4 gap-[2px] font-mono text-sm">
-            {customizationPreviewPieces.map((piece, index) => (
-              <div
-                className="aspect-square flex items-center justify-center overflow-hidden"
-                key={index}
-                style={{ background: index % 2 === 0 ? "var(--color-square-light)" : "var(--color-square-dark)" }}
-              >
-                {piece ? <ChessPieceSvg piece={piece} styleName={draft.pieceStyle} /> : null}
-              </div>
-            ))}
-          </div>
-          <span className="text-[12px] text-[var(--color-text-secondary)]">Превью</span>
-        </div>
-
-        <div className="flex gap-2">
-          <Button className="flex-1" onClick={onClose} variant="ghost">
-            Отмена
-          </Button>
-          <Button className="flex-1" onClick={() => onSave(draft)}>
-            Сохранить
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <button
-      className={`relative h-6 w-11 rounded-full transition-colors ${checked ? "bg-[var(--color-accent)]" : "bg-[var(--color-border)]"}`}
-      onClick={() => onChange(!checked)}
-      type="button"
-    >
-      <span className={`absolute top-0.5 block h-5 w-5 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
-    </button>
-  );
-}
-
-function _CustomizationGrid<T extends string>({
-  isPremium,
-  items,
-  label,
-  onSelect,
-  selected
-}: {
-  isPremium: boolean;
-  items: Array<{ label: string; premium: boolean; preview: string; value: T }>;
-  label: string;
-  onSelect: (value: T) => void;
-  selected: T;
-}) {
-  return (
-    <fieldset className="grid gap-2">
-      <legend className="text-[14px] text-[var(--color-text-secondary)]">{label}</legend>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {items.map((item) => {
-          const locked = item.premium && !isPremium;
-
-          return (
-            <button
-              className={`min-h-[92px] rounded-[8px] border p-3 text-left transition-colors ${selected === item.value ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"} ${locked ? "opacity-55" : ""}`}
-              disabled={locked}
-              key={item.value}
-              onClick={() => onSelect(item.value)}
-              type="button"
-            >
-              <div className="font-mono text-[22px]">{locked ? "🔒" : item.preview}</div>
-              <div className="mt-2 text-[14px]">{item.label}{selected === item.value ? " ✓" : ""}</div>
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
-
-function _ToggleRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: (value: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[var(--color-text-secondary)]">{label}</span>
-      <div className="grid grid-cols-2 gap-2">
-        <button className={`rounded-[6px] border px-3 py-2 ${checked ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"}`} onClick={() => onChange(true)} type="button">ВКЛ ●</button>
-        <button className={`rounded-[6px] border px-3 py-2 ${!checked ? "border-[var(--color-accent)]" : "border-[var(--color-border)]"}`} onClick={() => onChange(false)} type="button">ВЫКЛ ○</button>
-      </div>
     </div>
   );
 }
@@ -2108,89 +1815,6 @@ function classificationColor(classification: MoveClassification): string {
   }
 
   return "#cc3030";
-}
-
-function getBoardThemeStyle(settings: CustomizationSettings): CSSProperties {
-  const theme = boardThemes[settings.boardTheme];
-
-  return {
-    "--color-square-dark": theme.dark,
-    "--color-square-light": theme.light,
-    "--color-highlight": toAlpha(settings.highlightColor, 0.45)
-  } as CSSProperties;
-}
-
-function readCustomization(): CustomizationSettings {
-  if (typeof window === "undefined") {
-    return defaultCustomization;
-  }
-
-  return {
-    animations: window.localStorage.getItem("chessAnimations") !== "false",
-    boardTheme: readEnum("chessBoardTheme", defaultCustomization.boardTheme, boardThemes),
-    highlightColor: readHighlightColor(),
-    pieceStyle: readEnum("chessPieceStyle", defaultCustomization.pieceStyle, pieceStyles),
-    sounds: window.localStorage.getItem("chessSounds") !== "false"
-  };
-}
-
-function toCustomizationSettings(preferences: NonNullable<AuthUser["preferences"]>): CustomizationSettings {
-  return {
-    animations: preferences.animations,
-    boardTheme: isBoardTheme(preferences.boardTheme) ? preferences.boardTheme : defaultCustomization.boardTheme,
-    highlightColor: isHighlightColor(preferences.highlightColor) ? preferences.highlightColor : defaultCustomization.highlightColor,
-    pieceStyle: isPieceStyle(preferences.pieceStyle) ? preferences.pieceStyle : defaultCustomization.pieceStyle,
-    sounds: preferences.sounds
-  };
-}
-
-function persistCustomization(settings: CustomizationSettings): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem("chessBoardTheme", settings.boardTheme);
-  window.localStorage.setItem("chessPieceStyle", settings.pieceStyle);
-  window.localStorage.setItem("chessHighlightColor", settings.highlightColor);
-  window.localStorage.setItem("chessAnimations", String(settings.animations));
-  window.localStorage.setItem("chessSounds", String(settings.sounds));
-}
-
-function readEnum<T extends string>(key: string, fallback: T, options: Record<T, unknown>): T {
-  const value = window.localStorage.getItem(key);
-
-  return value && value in options ? (value as T) : fallback;
-}
-
-function readHighlightColor(): CustomizationSettings["highlightColor"] {
-  const value = window.localStorage.getItem("chessHighlightColor");
-
-  if (isHighlightColor(value)) {
-    return value;
-  }
-
-  return defaultCustomization.highlightColor;
-}
-
-function isHighlightColor(value: string | null): value is CustomizationSettings["highlightColor"] {
-  return value === "#f0c040" || value === "#3b82f6" || value === "#81b64c" || value === "#cc3030";
-}
-
-function isBoardTheme(value: string): value is CustomizationSettings["boardTheme"] {
-  return value in boardThemes;
-}
-
-function isPieceStyle(value: string): value is CustomizationSettings["pieceStyle"] {
-  return value in pieceStyles;
-}
-
-function toAlpha(hex: string, alpha: number): string {
-  const value = hex.replace("#", "");
-  const red = Number.parseInt(value.slice(0, 2), 16);
-  const green = Number.parseInt(value.slice(2, 4), 16);
-  const blue = Number.parseInt(value.slice(4, 6), 16);
-
-  return `rgba(${red},${green},${blue},${alpha})`;
 }
 
 function specialMoveIcon(notation: string): string {
