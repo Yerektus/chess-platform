@@ -18,6 +18,9 @@ export function SiteNavigation() {
           <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/leaderboard">
             Рейтинг
           </Link>
+          <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/learn">
+            Обучение
+          </Link>
           <Link className="py-5 transition-colors hover:text-[var(--color-text-primary)]" href="/profile">
             Профиль
           </Link>
