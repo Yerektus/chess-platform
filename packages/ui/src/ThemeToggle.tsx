@@ -36,7 +36,7 @@ export function ThemeToggle({ className, onThemeChange }: ThemeToggleProps) {
 
   return (
     <div
-      aria-label="Theme"
+      aria-label="Тема"
       className={cx(
         "inline-flex h-10 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1",
         className
@@ -52,7 +52,7 @@ export function ThemeToggle({ className, onThemeChange }: ThemeToggleProps) {
         onClick={() => selectTheme("light")}
         type="button"
       >
-        Light
+        Светлая
       </button>
       <button
         aria-pressed={theme === "dark"}
@@ -63,7 +63,7 @@ export function ThemeToggle({ className, onThemeChange }: ThemeToggleProps) {
         onClick={() => selectTheme("dark")}
         type="button"
       >
-        Dark
+        Темная
       </button>
     </div>
   );
