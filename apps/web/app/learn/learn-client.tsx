@@ -5,6 +5,7 @@ import {
   getLegalMoves,
   parseFEN,
   type BoardState,
+  type Color,
   type Square
 } from "@chess-platform/chess-engine";
 import { Button, Card, ChessBoard } from "@chess-platform/ui";
@@ -56,11 +57,6 @@ export function LearnClient() {
     >
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6">
         <header className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3 text-[13px] font-medium text-[var(--color-text-secondary)]">
-            <span className="rounded-[999px] border border-[var(--color-border)] px-3 py-1">6 шахматистов</span>
-            <span className="rounded-[999px] border border-[var(--color-border)] px-3 py-1">точные фрагменты</span>
-            <span className="rounded-[999px] border border-[var(--color-border)] px-3 py-1">учебные шаблоны</span>
-          </div>
           <div>
             <h1 className="text-[28px] font-semibold leading-tight md:text-[36px]">Обучение по великим шахматистам</h1>
             <p className="mt-2 max-w-[780px] text-[15px] leading-6 text-[var(--color-text-secondary)]">
@@ -72,9 +68,7 @@ export function LearnClient() {
         <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
           <PlayerTemplatePanel
             onSelectPlayer={handleSelectPlayer}
-            onSelectTemplate={setSelectedTemplateId}
             selectedPlayer={selectedPlayer}
-            selectedTemplate={selectedTemplate}
           />
 
           <TrainerBoard
@@ -94,14 +88,10 @@ export function LearnClient() {
 
 function PlayerTemplatePanel({
   onSelectPlayer,
-  onSelectTemplate,
-  selectedPlayer,
-  selectedTemplate
+  selectedPlayer
 }: {
   onSelectPlayer: (player: GreatPlayerTemplateSet) => void;
-  onSelectTemplate: (templateId: string) => void;
   selectedPlayer: GreatPlayerTemplateSet;
-  selectedTemplate: TrainingTemplate;
 }) {
   return (
     <aside className="flex flex-col gap-4">
@@ -129,35 +119,6 @@ function PlayerTemplatePanel({
           })}
         </div>
       </Card>
-
-      <Card className="flex flex-col gap-3 p-4">
-        <h2 className="text-[18px] font-semibold">Шаблоны</h2>
-        <p className="text-[13px] leading-5 text-[var(--color-text-secondary)]">{selectedPlayer.styleSummary}</p>
-        <div className="flex flex-col gap-2">
-          {selectedPlayer.templates.map((template) => {
-            const active = template.id === selectedTemplate.id;
-
-            return (
-              <button
-                className={`rounded-[8px] border px-3 py-3 text-left transition-colors ${
-                  active
-                    ? "border-[var(--color-accent)] bg-[rgba(129,182,76,0.14)]"
-                    : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
-                }`}
-                key={template.id}
-                onClick={() => onSelectTemplate(template.id)}
-                type="button"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-medium text-[var(--color-text-primary)]">{template.title}</span>
-                  <TemplateKind kind={template.kind} />
-                </span>
-                <span className="mt-2 block text-[12px] text-[var(--color-text-secondary)]">{template.difficulty}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
     </aside>
   );
 }
@@ -179,6 +140,7 @@ function TrainerBoard({
   const [hintCount, setHintCount] = useState(0);
   const [lastMove, setLastMove] = useState<LastMove | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const trainingColor = useMemo<Color>(() => parseFEN(template.fen).turn, [template.fen]);
   const isComplete = currentStep >= template.solutionMoves.length;
   const expectedMove = template.solutionMoves[currentStep] ?? null;
   const legalMoves = useMemo(
@@ -213,15 +175,35 @@ function TrainerBoard({
         return;
       }
 
-      const nextState = applyMove(boardState, selectedSquare, square, expectedMove.promotion);
-      const nextStep = currentStep + 1;
+      let nextState = applyMove(boardState, selectedSquare, square, expectedMove.promotion);
+      let nextStep = currentStep + 1;
+      let nextLastMove: LastMove = { from: selectedSquare, to: square };
+      let autoReplyNotation: string | null = null;
+      const autoReply = template.solutionMoves[nextStep] ?? null;
+
+      if (autoReply) {
+        const autoReplyPiece = nextState.squares[autoReply.from];
+        const isOpponentReply = autoReplyPiece?.color === nextState.turn && autoReplyPiece.color !== trainingColor;
+        const isLegalReply = getLegalMoves(nextState, autoReply.from).includes(autoReply.to);
+
+        if (isOpponentReply && isLegalReply) {
+          nextState = applyMove(nextState, autoReply.from, autoReply.to, autoReply.promotion);
+          nextStep += 1;
+          nextLastMove = { from: autoReply.from, to: autoReply.to };
+          autoReplyNotation = autoReply.notation;
+        }
+      }
 
       setBoardState(nextState);
       setCurrentStep(nextStep);
-      setLastMove({ from: selectedSquare, to: square });
+      setLastMove(nextLastMove);
       setSelectedSquare(null);
       setFeedback(
-        nextStep >= template.solutionMoves.length
+        autoReplyNotation && nextStep >= template.solutionMoves.length
+          ? `Верно: ${expectedMove.notation}. Оппонент ответил: ${autoReplyNotation}. Решение найдено.`
+          : autoReplyNotation
+            ? `Верно: ${expectedMove.notation}. Оппонент ответил: ${autoReplyNotation}. Продолжайте линию.`
+            : nextStep >= template.solutionMoves.length
           ? "Решение найдено. Разберите идею справа."
           : `Верно: ${expectedMove.notation}. Продолжайте линию.`
       );
