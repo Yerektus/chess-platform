@@ -203,8 +203,12 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
               ))}
             </div>
           </div>
+        </div>
+      </section>
 
-          <section id="premium" className="rounded-[8px] border border-white/10 bg-[#302f2b] p-5 shadow-[0_18px_52px_rgba(0,0,0,0.26)]">
+      <section id="premium" className="border-t border-white/10 bg-[#1f1e1b] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1280px]">
+          <div className="rounded-[8px] border border-white/10 bg-[#302f2b] p-5 shadow-[0_18px_52px_rgba(0,0,0,0.26)]">
             <div className="rounded-[8px] border border-[#81b64c]/45 bg-[#202d19] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -254,7 +258,7 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
                 Не удалось открыть Stripe Checkout. Проверь публичный ключ и price id.
               </p>
             ) : null}
-          </section>
+          </div>
         </div>
       </section>
 
