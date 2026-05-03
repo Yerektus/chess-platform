@@ -140,13 +140,13 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
     <div className="overflow-hidden bg-[#1f1e1b] text-white">
       <section
         id="play"
-        className="mx-auto grid min-h-[calc(100vh-64px)] w-full max-w-[1280px] items-center gap-10 px-4 pb-12 pt-8 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)] lg:gap-14 lg:px-8 lg:py-12"
+        className="mx-auto grid min-h-[calc(100vh-64px)] w-full max-w-[1280px] items-center gap-10 px-4 pb-12 pt-8 sm:px-6 lg:px-8 lg:py-12"
       >
-        <div className="order-2 mx-auto w-full max-w-[640px] lg:order-1">
+        <div className="order-2 mx-auto w-full max-w-[640px]">
           <BoardPreview />
         </div>
 
-        <div className="order-1 mx-auto flex w-full max-w-[620px] flex-col items-center text-center lg:order-2 lg:items-start lg:text-left">
+        <div className="order-1 mx-auto flex w-full max-w-[620px] flex-col items-center text-center">
           <p className="inline-flex h-8 items-center rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[#d6e8c0]">
             Играй, тренируйся, разбирай партии
           </p>
@@ -169,7 +169,7 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
       </section>
 
       <section className="border-t border-white/10 bg-[#262522] px-4 py-10 sm:px-6 lg:px-8" aria-labelledby="modes-title">
-        <div className="mx-auto grid max-w-[1280px] gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+        <div className="mx-auto grid max-w-[1280px] gap-5">
           <div>
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -276,7 +276,7 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
             </p>
           </div>
 
-          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-7 grid gap-4 sm:grid-cols-2">
             {featureBlocks.map((feature) => (
               <Link
                 className="group flex min-h-[220px] flex-col justify-between rounded-[8px] border border-white/10 bg-[#302f2b] p-5 transition duration-150 hover:-translate-y-1 hover:border-[#81b64c] hover:bg-[#35342f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.3)]"
