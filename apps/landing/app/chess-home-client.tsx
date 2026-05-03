@@ -178,9 +178,6 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
                   Выбери формат партии
                 </h2>
               </div>
-              <p className="max-w-[440px] text-[14px] leading-[1.6] text-[#bdb8ad]">
-                Вход в игру остается быстрым: выбери сценарий и переходи сразу в приложение.
-              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

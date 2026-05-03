@@ -167,6 +167,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const [hoverMove, setHoverMove] = useState<LastMove | null>(null);
   const [viewedPly, setViewedPly] = useState<number | null>(null);
   const [result, setResult] = useState<ResultInfo | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -200,6 +201,11 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
   const boardThemeStyle = getBoardThemeStyle(customization);
   const gameDuration = playerClocks.white + playerClocks.black;
 
+  const finishGame = useCallback((nextResult: ResultInfo) => {
+    setResult(nextResult);
+    setShowResultModal(true);
+  }, []);
+
   const resetPosition = useCallback(() => {
     gameVersionRef.current += 1;
     botRequestRef.current += 1;
@@ -213,6 +219,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
     setHoverMove(null);
     setViewedPly(null);
     setResult(null);
+    setShowResultModal(false);
     setIsAiThinking(false);
     setCopyPgnStatus(null);
     savedGameKeyRef.current = null;
@@ -292,19 +299,19 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
       setViewedPly(null);
 
       if (nextStatus === "checkmate") {
-        setResult({
+        finishGame({
           title: `${colorLabel(movingPiece.color)} победили!`,
           subtitle: "Победа матом",
           winner: movingPiece.color
         });
       } else if (nextStatus === "stalemate") {
-        setResult({
+        finishGame({
           title: "Ничья",
           subtitle: "Пат",
           winner: "draw"
         });
       } else if (nextStatus === "draw") {
-        setResult({
+        finishGame({
           title: "Ничья",
           subtitle: "Партия завершена",
           winner: "draw"
@@ -313,7 +320,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
 
       return nextState;
     },
-    []
+    [finishGame]
   );
 
   const requestAiMove = useCallback(
@@ -348,7 +355,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         commitMove(currentState, parsedMove.from, parsedMove.to, parsedMove.promotion);
       } catch (error) {
         if (gameVersionRef.current === gameVersion && botRequestRef.current === requestId) {
-          setResult({
+          finishGame({
             title: "Партия остановлена",
             subtitle: error instanceof Error ? error.message : "Stockfish move failed",
             winner: null
@@ -360,7 +367,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         }
       }
     },
-    [commitMove, getMove]
+    [commitMove, finishGame, getMove]
   );
 
   useEffect(() => {
@@ -561,7 +568,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
             {gameStarted ? (
               <>
                 <PlayerInfo
-                  active={state.turn === "black" && viewedPly === null}
+                  active={!result && state.turn === "black" && viewedPly === null}
                   color="black"
                   name={playerNames.black}
                   time={playerClocks.black}
@@ -578,7 +585,7 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
                   state={displayedState}
                 />
                 <PlayerInfo
-                  active={state.turn === "white" && viewedPly === null}
+                  active={!result && state.turn === "white" && viewedPly === null}
                   color="white"
                   name={playerNames.white}
                   time={playerClocks.white}
@@ -625,10 +632,10 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
 
             <Card className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
-                <Button disabled={isAiThinking} onClick={() => setResult(createResignationResult(state.turn))} variant="ghost">
+                <Button disabled={isAiThinking} onClick={() => finishGame(createResignationResult(state.turn))} variant="ghost">
                   Сдаться
                 </Button>
-                <Button disabled={isAiThinking} onClick={() => setResult({ title: "Ничья", subtitle: "Предложена ничья", winner: "draw" })} variant="ghost">
+                <Button disabled={isAiThinking} onClick={() => finishGame({ title: "Ничья", subtitle: "Предложена ничья", winner: "draw" })} variant="ghost">
                   Ничья
                 </Button>
               </div>
@@ -649,15 +656,16 @@ export function LocalGame({ mode = "local" }: { mode?: RouteMode }) {
         isPremium={isPremium}
         moveCount={moveHistory.length}
         onAnalyze={() => void handleAnalyzeGame()}
-        onClose={() => setResult(null)}
+        onClose={() => setShowResultModal(false)}
         onCopyPgn={handleCopyPgn}
         onMenu={() => {
           setResult(null);
+          setShowResultModal(false);
           setGameStarted(false);
           router.push("/game/local");
         }}
         onNewGame={resetGame}
-        open={Boolean(result)}
+        open={showResultModal && Boolean(result)}
         pgnStatus={copyPgnStatus}
         result={result}
         whiteAccuracy={analysisResult?.accuracy.white}
