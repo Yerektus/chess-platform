@@ -34,16 +34,11 @@ export function LearnClient() {
     () => selectedPlayer.templates.find((template) => template.id === selectedTemplateId) ?? selectedPlayer.templates[0],
     [selectedPlayer, selectedTemplateId]
   );
-  const [completedTemplateId, setCompletedTemplateId] = useState<string | null>(null);
   const [customization, setCustomization] = useState<CustomizationSettings>(defaultCustomization);
 
   useEffect(() => {
     setCustomization(readCustomization());
   }, []);
-
-  useEffect(() => {
-    setCompletedTemplateId(null);
-  }, [selectedTemplate.id]);
 
   const handleSelectPlayer = (player: GreatPlayerTemplateSet) => {
     setSelectedPlayerId(player.id);
@@ -74,12 +69,8 @@ export function LearnClient() {
           <TrainerBoard
             key={selectedTemplate.id}
             customization={customization}
-            onComplete={() => setCompletedTemplateId(selectedTemplate.id)}
-            onResetProgress={() => setCompletedTemplateId(null)}
             template={selectedTemplate}
           />
-
-          <TemplateGuide isComplete={completedTemplateId === selectedTemplate.id} template={selectedTemplate} />
         </div>
       </div>
     </main>
@@ -125,13 +116,9 @@ function PlayerTemplatePanel({
 
 function TrainerBoard({
   customization,
-  onComplete,
-  onResetProgress,
   template
 }: {
   customization: CustomizationSettings;
-  onComplete: () => void;
-  onResetProgress: () => void;
   template: TrainingTemplate;
 }) {
   const [boardState, setBoardState] = useState<BoardState>(() => parseFEN(template.fen));
@@ -155,7 +142,6 @@ function TrainerBoard({
     setHintCount(0);
     setLastMove(null);
     setSelectedSquare(null);
-    onResetProgress();
   };
 
   const handleSquareClick = (square: Square) => {
@@ -207,9 +193,6 @@ function TrainerBoard({
           ? "Решение найдено. Разберите идею справа."
           : `Верно: ${expectedMove.notation}. Продолжайте линию.`
       );
-      if (nextStep >= template.solutionMoves.length) {
-        onComplete();
-      }
       return;
     }
 
@@ -224,59 +207,89 @@ function TrainerBoard({
   };
 
   return (
-    <section className="flex min-w-0 flex-col gap-4">
-      <Card className="flex flex-col gap-4 p-4 md:p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <TemplateKind kind={template.kind} />
-              <span className="rounded-[999px] border border-[var(--color-border)] px-3 py-1 text-[12px] text-[var(--color-text-secondary)]">
-                {template.difficulty}
-              </span>
+    <section className="grid min-w-0 gap-4 xl:col-span-2 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-4">
+        <Card className="flex flex-col gap-4 p-4 md:p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <TemplateKind kind={template.kind} />
+                <span className="rounded-[999px] border border-[var(--color-border)] px-3 py-1 text-[12px] text-[var(--color-text-secondary)]">
+                  {template.difficulty}
+                </span>
+              </div>
+              <h2 className="mt-3 text-[24px] font-semibold leading-tight">{template.title}</h2>
+              {template.sourceLabel ? (
+                <p className="mt-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">{template.sourceLabel}</p>
+              ) : null}
             </div>
-            <h2 className="mt-3 text-[24px] font-semibold leading-tight">{template.title}</h2>
-            {template.sourceLabel ? (
-              <p className="mt-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">{template.sourceLabel}</p>
-            ) : null}
+            <Button className="min-h-10 shrink-0" onClick={reset} variant="ghost">
+              Сбросить
+            </Button>
           </div>
-          <Button className="min-h-10 shrink-0" onClick={reset} variant="ghost">
-            Сбросить
+
+          <div className="mx-auto w-full max-w-[680px]">
+            <ChessBoard
+              className="mx-auto max-w-[min(100%,680px)]"
+              lastMove={lastMove}
+              legalMoves={legalMoves}
+              onSquareClick={handleSquareClick}
+              orientation={template.orientation}
+              pieceStyle={customization.pieceStyle}
+              selectedSquare={selectedSquare}
+              state={boardState}
+            />
+          </div>
+        </Card>
+      </div>
+
+      <TemplateGuide
+        feedback={feedback}
+        hintCount={hintCount}
+        isComplete={isComplete}
+        onHint={() => setHintCount((count) => Math.min(template.hints.length, count + 1))}
+        onReset={reset}
+        template={template}
+      />
+    </section>
+  );
+}
+
+function TemplateGuide({
+  feedback,
+  hintCount,
+  isComplete,
+  onHint,
+  onReset,
+  template
+}: {
+  feedback: string;
+  hintCount: number;
+  isComplete: boolean;
+  onHint: () => void;
+  onReset: () => void;
+  template: TrainingTemplate;
+}) {
+  return (
+    <aside className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-3 p-4">
+        <div>
+          <p className="text-[13px] text-[var(--color-text-secondary)]">Статус</p>
+          <p className="mt-1 text-[15px] leading-6">{feedback}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            className="min-h-10"
+            disabled={hintCount >= template.hints.length || isComplete}
+            onClick={onHint}
+            variant="ghost"
+          >
+            Подсказка
           </Button>
-        </div>
-
-        <div className="mx-auto w-full max-w-[680px]">
-          <ChessBoard
-            className="mx-auto max-w-[min(100%,680px)]"
-            lastMove={lastMove}
-            legalMoves={legalMoves}
-            onSquareClick={handleSquareClick}
-            orientation={template.orientation}
-            pieceStyle={customization.pieceStyle}
-            selectedSquare={selectedSquare}
-            state={boardState}
-          />
-        </div>
-      </Card>
-
-      <Card className="flex flex-col gap-3 p-4 md:p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[13px] text-[var(--color-text-secondary)]">Статус</p>
-            <p className="mt-1 text-[15px] leading-6">{feedback}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              className="min-h-10"
-              disabled={hintCount >= template.hints.length || isComplete}
-              onClick={() => setHintCount((count) => Math.min(template.hints.length, count + 1))}
-              variant="ghost"
-            >
-              Подсказка
-            </Button>
-            <Button className="min-h-10" onClick={reset} variant="ghost">
-              Заново
-            </Button>
-          </div>
+          <Button className="min-h-10" onClick={onReset} variant="ghost">
+            Заново
+          </Button>
         </div>
 
         {hintCount > 0 ? (
@@ -292,13 +305,7 @@ function TrainerBoard({
           </div>
         ) : null}
       </Card>
-    </section>
-  );
-}
 
-function TemplateGuide({ isComplete, template }: { isComplete: boolean; template: TrainingTemplate }) {
-  return (
-    <aside className="flex flex-col gap-4">
       <Card className="flex flex-col gap-4 p-4">
         <div>
           <p className="text-[13px] text-[var(--color-text-secondary)]">Цель позиции</p>
