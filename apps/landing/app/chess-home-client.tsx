@@ -162,7 +162,7 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
               className="inline-flex min-h-[58px] w-full items-center justify-center rounded-[8px] bg-[#81b64c] px-6 py-4 text-center text-[18px] font-extrabold leading-none text-[#16210d] shadow-[0_6px_0_#5f8d35] transition-colors duration-150 hover:bg-[#93c85c]"
               href={localGameHref}
             >
-              Играть офлайн
+              Играть
             </Link>
           </div>
         </div>
@@ -214,9 +214,6 @@ export function ChessHomeClient({ aiGameHref, localGameHref, onlineGameHref, pro
                   <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#b7e18d]">Подписка</p>
                   <h2 className="mt-2 text-[30px] font-extrabold leading-none text-white">Pro</h2>
                 </div>
-                <span className="rounded-full bg-[#81b64c] px-3 py-1 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#16210d]">
-                  лучше для анализа
-                </span>
               </div>
 
               <div className="mt-6 flex items-end gap-2">
